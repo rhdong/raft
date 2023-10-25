@@ -693,6 +693,8 @@ def _func_worker_ranks(client, workers):
     For each worker connected to the client, compute a global rank which takes
     into account the NVML device index and the worker IP
     (group workers on same host and order by NVML device).
+    Note that the reason for sorting was nvbug 4149999 and is presumably
+    fixed afterNCCL 2.19.3.
 
     Parameters
     ----------
