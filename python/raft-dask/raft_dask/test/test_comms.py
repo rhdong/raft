@@ -247,7 +247,9 @@ def test_collectives(client, func, root_location):
 
 
 @pytest.mark.nccl
-@pytest.mark.parametrize("subset", [-1, 1, slice(None, None, -2)])
+@pytest.mark.parametrize(
+    "subset", [slice(-1, None), slice(1), slice(None, None, -2)]
+)
 def test_comm_init_worker_subset(client, subset):
     # Basic test that initializing a subset of workers is fine
     cb = Comms(comms_p2p=True, verbose=True)
