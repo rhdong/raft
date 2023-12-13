@@ -23,7 +23,8 @@
 #include <raft/core/resources.hpp>           // raft::resources
 #include <raft/distance/distance_types.hpp>  // raft::distance::DistanceType
 #include <raft/neighbors/brute_force_types.hpp>
-#include <raft/util/raft_explicit.hpp>  // RAFT_EXPLICIT
+#include <raft/neighbors/sample_fiter_type.hpp>  // none_bf_sample_filter
+#include <raft/util/raft_explicit.hpp>           // RAFT_EXPLICIT
 
 #ifdef RAFT_EXPLICIT_INSTANTIATE_ONLY
 
@@ -68,13 +69,18 @@ void knn(raft::resources const& handle,
          std::optional<idx_t> global_id_offset = std::nullopt,
          epilogue_op distance_epilogue         = raft::identity_op()) RAFT_EXPLICIT;
 
-template <typename value_t, typename idx_t, typename idx_layout, typename query_layout>
+template <typename value_t,
+          typename idx_t,
+          typename idx_layout,
+          typename query_layout,
+          typename BfSampleFilterT>
 void fused_l2_knn(raft::resources const& handle,
                   raft::device_matrix_view<const value_t, idx_t, idx_layout> index,
                   raft::device_matrix_view<const value_t, idx_t, query_layout> query,
                   raft::device_matrix_view<idx_t, idx_t, row_major> out_inds,
                   raft::device_matrix_view<value_t, idx_t, row_major> out_dists,
-                  raft::distance::DistanceType metric) RAFT_EXPLICIT;
+                  raft::distance::DistanceType metric,
+                  BfSampleFilterT sample_filter) RAFT_EXPLICIT;
 
 }  // namespace raft::neighbors::brute_force
 
@@ -131,18 +137,21 @@ extern template raft::neighbors::brute_force::index<float> build<float>(
 }  // namespace raft::neighbors::brute_force
 
 #define instantiate_raft_neighbors_brute_force_fused_l2_knn(            \
-  value_t, idx_t, idx_layout, query_layout)                             \
+  value_t, idx_t, idx_layout, query_layout, BfSampleFilterT)            \
   extern template void raft::neighbors::brute_force::fused_l2_knn(      \
     raft::resources const& handle,                                      \
     raft::device_matrix_view<const value_t, idx_t, idx_layout> index,   \
     raft::device_matrix_view<const value_t, idx_t, query_layout> query, \
     raft::device_matrix_view<idx_t, idx_t, row_major> out_inds,         \
     raft::device_matrix_view<value_t, idx_t, row_major> out_dists,      \
-    raft::distance::DistanceType metric);
+    raft::distance::DistanceType metric,                                \
+    BfSampleFilterT sample_filter);
 
-instantiate_raft_neighbors_brute_force_fused_l2_knn(float,
-                                                    int64_t,
-                                                    raft::row_major,
-                                                    raft::row_major)
+instantiate_raft_neighbors_brute_force_fused_l2_knn(
+  float,
+  int64_t,
+  raft::row_major,
+  raft::row_major,
+  raft::neighbors::filtering::none_bf_sample_filter)
 
 #undef instantiate_raft_neighbors_brute_force_fused_l2_knn

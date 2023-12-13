@@ -19,24 +19,33 @@
 #include <raft/distance/distance_types.hpp>  // DistanceType
 #include <raft/spatial/knn/detail/fused_l2_knn-inl.cuh>
 
-#define instantiate_raft_spatial_knn_detail_fusedL2Knn(Mvalue_idx, Mvalue_t, MusePrevTopKs)  \
-  template void raft::spatial::knn::detail::fusedL2Knn<Mvalue_idx, Mvalue_t, MusePrevTopKs>( \
-    size_t D,                                                                                \
-    Mvalue_idx * out_inds,                                                                   \
-    Mvalue_t * out_dists,                                                                    \
-    const Mvalue_t* index,                                                                   \
-    const Mvalue_t* query,                                                                   \
-    size_t n_index_rows,                                                                     \
-    size_t n_query_rows,                                                                     \
-    int k,                                                                                   \
-    bool rowMajorIndex,                                                                      \
-    bool rowMajorQuery,                                                                      \
-    cudaStream_t stream,                                                                     \
-    raft::distance::DistanceType metric,                                                     \
-    const Mvalue_t* index_norms,                                                             \
-    const Mvalue_t* query_norms)
+#define instantiate_raft_spatial_knn_detail_fusedL2Knn(                                         \
+  Mvalue_idx, Mvalue_t, MusePrevTopKs, BfSampleFilterT)                                         \
+  template void                                                                                 \
+  raft::spatial::knn::detail::fusedL2Knn<Mvalue_idx, Mvalue_t, MusePrevTopKs, BfSampleFilterT>( \
+    size_t D,                                                                                   \
+    Mvalue_idx * out_inds,                                                                      \
+    Mvalue_t * out_dists,                                                                       \
+    const Mvalue_t* index,                                                                      \
+    const Mvalue_t* query,                                                                      \
+    size_t n_index_rows,                                                                        \
+    size_t n_query_rows,                                                                        \
+    int k,                                                                                      \
+    bool rowMajorIndex,                                                                         \
+    bool rowMajorQuery,                                                                         \
+    cudaStream_t stream,                                                                        \
+    raft::distance::DistanceType metric,                                                        \
+    const Mvalue_t* index_norms,                                                                \
+    const Mvalue_t* query_norms,                                                                \
+    BfSampleFilterT sample_filter)
 
-instantiate_raft_spatial_knn_detail_fusedL2Knn(int32_t, float, true);
-instantiate_raft_spatial_knn_detail_fusedL2Knn(int32_t, float, false);
+instantiate_raft_spatial_knn_detail_fusedL2Knn(int32_t,
+                                               float,
+                                               true,
+                                               raft::neighbors::filtering::none_bf_sample_filter);
+instantiate_raft_spatial_knn_detail_fusedL2Knn(int32_t,
+                                               float,
+                                               false,
+                                               raft::neighbors::filtering::none_bf_sample_filter);
 
 #undef instantiate_raft_spatial_knn_detail_fusedL2Knn

@@ -21,6 +21,7 @@
 #include <raft/distance/distance_types.hpp>
 #include <raft/neighbors/brute_force_types.hpp>
 #include <raft/neighbors/detail/knn_brute_force.cuh>
+#include <raft/neighbors/sample_filter_types.hpp>
 #include <raft/spatial/knn/detail/fused_l2_knn.cuh>
 
 namespace raft::neighbors::brute_force {
@@ -236,13 +237,18 @@ void knn(raft::resources const& handle,
  * @param[out] out_dists output dists array on device (size n * k)
  * @param[in] metric type of distance computation to perform (must be a variant of L2)
  */
-template <typename value_t, typename idx_t, typename idx_layout, typename query_layout>
+template <typename value_t,
+          typename idx_t,
+          typename idx_layout,
+          typename query_layout,
+          typename BfSampleFilterT>
 void fused_l2_knn(raft::resources const& handle,
                   raft::device_matrix_view<const value_t, idx_t, idx_layout> index,
                   raft::device_matrix_view<const value_t, idx_t, query_layout> query,
                   raft::device_matrix_view<idx_t, idx_t, row_major> out_inds,
                   raft::device_matrix_view<value_t, idx_t, row_major> out_dists,
-                  raft::distance::DistanceType metric)
+                  raft::distance::DistanceType metric,
+                  BfSampleFilterT sample_filter)
 {
   int k = static_cast<int>(out_inds.extent(1));
 
@@ -278,7 +284,8 @@ void fused_l2_knn(raft::resources const& handle,
                                          rowMajorIndex,
                                          rowMajorQuery,
                                          resource::get_cuda_stream(handle),
-                                         metric);
+                                         metric,
+                                         sample_filter);
 }
 
 /**
@@ -348,7 +355,37 @@ void search(raft::resources const& res,
             raft::device_matrix_view<IdxT, int64_t, row_major> neighbors,
             raft::device_matrix_view<T, int64_t, row_major> distances)
 {
-  raft::neighbors::detail::brute_force_search<T, IdxT>(res, idx, queries, neighbors, distances);
+  raft::neighbors::detail::
+    brute_force_search<T, IdxT, raft::neighbors::filtering::none_bf_sample_filter>(
+      res, idx, queries, neighbors, distances, raft::neighbors::filtering::none_bf_sample_filter());
 }
+
+/**
+ * @brief Brute Force search with pre-filtering using the constructed index.
+ *
+ * @tparam T data element type
+ * @tparam IdxT type of the indices
+ *
+ * @param[in] res raft resources
+ * @param[in] idx brute force index
+ * @param[in] queries a device matrix view to a row-major matrix [n_queries, index->dim()]
+ * @param[out] neighbors a device matrix view to the indices of the neighbors in the source dataset
+ * [n_queries, k]
+ * @param[out] distances a device matrix view to the distances to the selected neighbors [n_queries,
+ * k]
+ * @param[in] sample_filter a filter the greenlights samples for a given query
+ */
+template <typename T, typename IdxT, typename BfSampleFilterT>
+void search_with_filtering(raft::resources const& res,
+                           const index<T>& idx,
+                           raft::device_matrix_view<const T, int64_t, row_major> queries,
+                           raft::device_matrix_view<IdxT, int64_t, row_major> neighbors,
+                           raft::device_matrix_view<T, int64_t, row_major> distances,
+                           BfSampleFilterT sample_filter = BfSampleFilterT())
+{
+  raft::neighbors::detail::brute_force_search<T, IdxT, BfSampleFilterT>(
+    res, idx, queries, neighbors, distances, sample_filter);
+}
+
 /** @} */  // end group brute_force_knn
 }  // namespace raft::neighbors::brute_force

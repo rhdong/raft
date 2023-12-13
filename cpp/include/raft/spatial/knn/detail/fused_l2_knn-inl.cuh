@@ -18,6 +18,7 @@
 #include <limits>
 #include <raft/linalg/norm.cuh>
 #include <raft/neighbors/detail/faiss_select/Select.cuh>
+#include <raft/neighbors/sample_filter_types.hpp>
 // TODO: Need to hide the PairwiseDistance class impl and expose to public API
 #include "processing.cuh"
 #include <raft/core/operators.hpp>
@@ -193,6 +194,7 @@ template <typename DataT,
           typename FinalLambda,
           int NumWarpQ,
           int NumThreadQ,
+          typename BfSampleFilterT,
           bool usePrevTopKs = false,
           bool isRowMajor   = true>
 __launch_bounds__(Policy::Nthreads, 2) RAFT_KERNEL fusedL2kNN(const DataT* x,
@@ -210,7 +212,8 @@ __launch_bounds__(Policy::Nthreads, 2) RAFT_KERNEL fusedL2kNN(const DataT* x,
                                                               unsigned int numOfNN,
                                                               volatile int* mutexes,
                                                               volatile OutT* out_dists,
-                                                              volatile IdxT* out_inds)
+                                                              volatile IdxT* out_inds,
+                                                              BfSampleFilterT sample_filter)
 {
   using AccT = typename OpT::AccT;
   extern __shared__ char smem[];
@@ -520,7 +523,8 @@ template <typename DataT,
           typename IdxT,
           int VecLen,
           bool usePrevTopKs,
-          bool isRowMajor>
+          bool isRowMajor,
+          typename BfSampleFilterT>
 void fusedL2UnexpKnnImpl(const DataT* x,
                          const DataT* y,
                          IdxT m,
@@ -535,7 +539,8 @@ void fusedL2UnexpKnnImpl(const DataT* x,
                          IdxT numOfNN,
                          cudaStream_t stream,
                          void* workspace,
-                         size_t& worksize)
+                         size_t& worksize,
+                         BfSampleFilterT sample_filter)
 {
   typedef typename raft::linalg::Policy2x8<DataT, 1>::Policy RowPolicy;
   typedef typename raft::linalg::Policy4x4<DataT, VecLen>::ColPolicy ColPolicy;
@@ -560,6 +565,7 @@ void fusedL2UnexpKnnImpl(const DataT* x,
                                                           decltype(fin_op),
                                                           32,
                                                           2,
+                                                          BfSampleFilterT,
                                                           usePrevTopKs,
                                                           isRowMajor>;
     constexpr auto fusedL2UnexpKnn64RowMajor = fusedL2kNN<DataT,
@@ -570,6 +576,7 @@ void fusedL2UnexpKnnImpl(const DataT* x,
                                                           decltype(fin_op),
                                                           64,
                                                           3,
+                                                          BfSampleFilterT,
                                                           usePrevTopKs,
                                                           isRowMajor>;
 
@@ -613,7 +620,8 @@ void fusedL2UnexpKnnImpl(const DataT* x,
                                                                   (uint32_t)numOfNN,
                                                                   (int*)workspace,
                                                                   out_dists,
-                                                                  out_inds);
+                                                                  out_inds,
+                                                                  sample_filter);
   } else {
   }
 
@@ -625,7 +633,8 @@ template <typename DataT,
           typename OutT,
           typename IdxT,
           bool usePrevTopKs,
-          bool isRowMajor>
+          bool isRowMajor,
+          typename BfSampleFilterT>
 void fusedL2UnexpKnn(IdxT m,
                      IdxT n,
                      IdxT k,
@@ -640,7 +649,8 @@ void fusedL2UnexpKnn(IdxT m,
                      IdxT numOfNN,
                      cudaStream_t stream,
                      void* workspace,
-                     size_t& worksize)
+                     size_t& worksize,
+                     BfSampleFilterT sample_filter)
 {
   size_t bytesA = sizeof(DataT) * lda;
   size_t bytesB = sizeof(DataT) * ldb;
@@ -660,7 +670,8 @@ void fusedL2UnexpKnn(IdxT m,
       numOfNN,
       stream,
       workspace,
-      worksize);
+      worksize,
+      sample_filter);
   } else if (8 % sizeof(DataT) == 0 && bytesA % 8 == 0 && bytesB % 8 == 0) {
     fusedL2UnexpKnnImpl<DataT, AccT, OutT, IdxT, 8 / sizeof(DataT), usePrevTopKs, isRowMajor>(
       x,
@@ -677,23 +688,26 @@ void fusedL2UnexpKnn(IdxT m,
       numOfNN,
       stream,
       workspace,
-      worksize);
+      worksize,
+      sample_filter);
   } else {
-    fusedL2UnexpKnnImpl<DataT, AccT, OutT, IdxT, 1, usePrevTopKs, isRowMajor>(x,
-                                                                              y,
-                                                                              m,
-                                                                              n,
-                                                                              k,
-                                                                              lda,
-                                                                              ldb,
-                                                                              ldd,
-                                                                              sqrt,
-                                                                              out_dists,
-                                                                              out_inds,
-                                                                              numOfNN,
-                                                                              stream,
-                                                                              workspace,
-                                                                              worksize);
+    fusedL2UnexpKnnImpl<DataT, AccT, OutT, IdxT, 1, usePrevTopKs, isRowMajor, BfSampleFilterT>(
+      x,
+      y,
+      m,
+      n,
+      k,
+      lda,
+      ldb,
+      ldd,
+      sqrt,
+      out_dists,
+      out_inds,
+      numOfNN,
+      stream,
+      workspace,
+      worksize,
+      sample_filter);
   }
 }
 
@@ -703,7 +717,8 @@ template <typename DataT,
           typename IdxT,
           int VecLen,
           bool usePrevTopKs,
-          bool isRowMajor>
+          bool isRowMajor,
+          typename BfSampleFilterT>
 void fusedL2ExpKnnImpl(const DataT* x,
                        const DataT* y,
                        const DataT* xn,
@@ -720,7 +735,8 @@ void fusedL2ExpKnnImpl(const DataT* x,
                        IdxT numOfNN,
                        cudaStream_t stream,
                        void* workspace,
-                       size_t& worksize)
+                       size_t& worksize,
+                       BfSampleFilterT sample_filter)
 {
   typedef typename raft::linalg::Policy2x8<DataT, 1>::Policy RowPolicy;
   typedef typename raft::linalg::Policy4x4<DataT, VecLen>::ColPolicy ColPolicy;
@@ -749,6 +765,7 @@ void fusedL2ExpKnnImpl(const DataT* x,
                                                         decltype(fin_op),
                                                         32,
                                                         2,
+                                                        BfSampleFilterT,
                                                         usePrevTopKs,
                                                         isRowMajor>;
     constexpr auto fusedL2ExpKnn64RowMajor = fusedL2kNN<DataT,
@@ -759,6 +776,7 @@ void fusedL2ExpKnnImpl(const DataT* x,
                                                         decltype(fin_op),
                                                         64,
                                                         3,
+                                                        BfSampleFilterT,
                                                         usePrevTopKs,
                                                         isRowMajor>;
 
@@ -823,7 +841,8 @@ void fusedL2ExpKnnImpl(const DataT* x,
                                                                 (uint32_t)numOfNN,
                                                                 mutexes,
                                                                 out_dists,
-                                                                out_inds);
+                                                                out_inds,
+                                                                sample_filter);
   } else {
   }
 
@@ -835,7 +854,8 @@ template <typename DataT,
           typename OutT,
           typename IdxT,
           bool usePrevTopKs,
-          bool isRowMajor>
+          bool isRowMajor,
+          typename BfSampleFilterT>
 void fusedL2ExpKnn(IdxT m,
                    IdxT n,
                    IdxT k,
@@ -852,7 +872,8 @@ void fusedL2ExpKnn(IdxT m,
                    IdxT numOfNN,
                    cudaStream_t stream,
                    void* workspace,
-                   size_t& worksize)
+                   size_t& worksize,
+                   BfSampleFilterT sample_filter)
 {
   size_t bytesA = sizeof(DataT) * lda;
   size_t bytesB = sizeof(DataT) * ldb;
@@ -874,7 +895,8 @@ void fusedL2ExpKnn(IdxT m,
       numOfNN,
       stream,
       workspace,
-      worksize);
+      worksize,
+      sample_filter);
   } else if (8 % sizeof(DataT) == 0 && bytesA % 8 == 0 && bytesB % 8 == 0) {
     fusedL2ExpKnnImpl<DataT, AccT, OutT, IdxT, 8 / sizeof(DataT), usePrevTopKs, isRowMajor>(
       x,
@@ -893,25 +915,28 @@ void fusedL2ExpKnn(IdxT m,
       numOfNN,
       stream,
       workspace,
-      worksize);
+      worksize,
+      sample_filter);
   } else {
-    fusedL2ExpKnnImpl<DataT, AccT, OutT, IdxT, 1, usePrevTopKs, isRowMajor>(x,
-                                                                            y,
-                                                                            xn,
-                                                                            yn,
-                                                                            m,
-                                                                            n,
-                                                                            k,
-                                                                            lda,
-                                                                            ldb,
-                                                                            ldd,
-                                                                            sqrt,
-                                                                            out_dists,
-                                                                            out_inds,
-                                                                            numOfNN,
-                                                                            stream,
-                                                                            workspace,
-                                                                            worksize);
+    fusedL2ExpKnnImpl<DataT, AccT, OutT, IdxT, 1, usePrevTopKs, isRowMajor, BfSampleFilterT>(
+      x,
+      y,
+      xn,
+      yn,
+      m,
+      n,
+      k,
+      lda,
+      ldb,
+      ldd,
+      sqrt,
+      out_dists,
+      out_inds,
+      numOfNN,
+      stream,
+      workspace,
+      worksize,
+      sample_filter);
   }
 }
 
@@ -931,7 +956,10 @@ void fusedL2ExpKnn(IdxT m,
  * @param[in] rowMajorQuery are the query array in row-major layout?
  * @param[in] stream stream to order kernel launch
  */
-template <typename value_idx, typename value_t, bool usePrevTopKs = false>
+template <typename value_idx,
+          typename value_t,
+          bool usePrevTopKs        = false,
+          typename BfSampleFilterT = raft::neighbors::filtering::none_bf_sample_filter>
 void fusedL2Knn(size_t D,
                 value_idx* out_inds,
                 value_t* out_dists,
@@ -944,8 +972,9 @@ void fusedL2Knn(size_t D,
                 bool rowMajorQuery,
                 cudaStream_t stream,
                 raft::distance::DistanceType metric,
-                const value_t* index_norms = NULL,
-                const value_t* query_norms = NULL)
+                const value_t* index_norms    = NULL,
+                const value_t* query_norms    = NULL,
+                BfSampleFilterT sample_filter = BfSampleFilterT())
 {
   // Validate the input data
   ASSERT(k > 0, "l2Knn: k must be > 0");
@@ -978,78 +1007,86 @@ void fusedL2Knn(size_t D,
           query, index, n_query_rows, n_index_rows, D);
       worksize = tempWorksize;
       workspace.resize(worksize, stream);
-      fusedL2ExpKnn<value_t, value_t, value_t, value_idx, usePrevTopKs, true>(n_query_rows,
-                                                                              n_index_rows,
-                                                                              D,
-                                                                              lda,
-                                                                              ldb,
-                                                                              ldd,
-                                                                              query,
-                                                                              index,
-                                                                              query_norms,
-                                                                              index_norms,
-                                                                              sqrt,
-                                                                              out_dists,
-                                                                              out_inds,
-                                                                              k,
-                                                                              stream,
-                                                                              workspace.data(),
-                                                                              worksize);
+      fusedL2ExpKnn<value_t, value_t, value_t, value_idx, usePrevTopKs, true, BfSampleFilterT>(
+        n_query_rows,
+        n_index_rows,
+        D,
+        lda,
+        ldb,
+        ldd,
+        query,
+        index,
+        query_norms,
+        index_norms,
+        sqrt,
+        out_dists,
+        out_inds,
+        k,
+        stream,
+        workspace.data(),
+        worksize,
+        sample_filter);
       if (worksize > tempWorksize) {
         workspace.resize(worksize, stream);
-        fusedL2ExpKnn<value_t, value_t, value_t, value_idx, usePrevTopKs, true>(n_query_rows,
-                                                                                n_index_rows,
-                                                                                D,
-                                                                                lda,
-                                                                                ldb,
-                                                                                ldd,
-                                                                                query,
-                                                                                index,
-                                                                                query_norms,
-                                                                                index_norms,
-                                                                                sqrt,
-                                                                                out_dists,
-                                                                                out_inds,
-                                                                                k,
-                                                                                stream,
-                                                                                workspace.data(),
-                                                                                worksize);
+        fusedL2ExpKnn<value_t, value_t, value_t, value_idx, usePrevTopKs, true, BfSampleFilterT>(
+          n_query_rows,
+          n_index_rows,
+          D,
+          lda,
+          ldb,
+          ldd,
+          query,
+          index,
+          query_norms,
+          index_norms,
+          sqrt,
+          out_dists,
+          out_inds,
+          k,
+          stream,
+          workspace.data(),
+          worksize,
+          sample_filter);
       }
       break;
     case raft::distance::DistanceType::L2Unexpanded:
     case raft::distance::DistanceType::L2SqrtUnexpanded:
-      fusedL2UnexpKnn<value_t, value_t, value_t, value_idx, usePrevTopKs, true>(n_query_rows,
-                                                                                n_index_rows,
-                                                                                D,
-                                                                                lda,
-                                                                                ldb,
-                                                                                ldd,
-                                                                                query,
-                                                                                index,
-                                                                                sqrt,
-                                                                                out_dists,
-                                                                                out_inds,
-                                                                                k,
-                                                                                stream,
-                                                                                workspace.data(),
-                                                                                worksize);
+      fusedL2UnexpKnn<value_t, value_t, value_t, value_idx, usePrevTopKs, true, BfSampleFilterT>(
+        n_query_rows,
+        n_index_rows,
+        D,
+        lda,
+        ldb,
+        ldd,
+        query,
+        index,
+        sqrt,
+        out_dists,
+        out_inds,
+        k,
+        stream,
+        workspace.data(),
+        worksize,
+        sample_filter);
       if (worksize) {
         workspace.resize(worksize, stream);
-        fusedL2UnexpKnn<value_t, value_t, value_t, value_idx, usePrevTopKs, true>(n_query_rows,
-                                                                                  n_index_rows,
-                                                                                  D,
-                                                                                  lda,
-                                                                                  ldb,
-                                                                                  ldd,
-                                                                                  query,
-                                                                                  index,
-                                                                                  sqrt,
-                                                                                  out_dists,
-                                                                                  out_inds,
-                                                                                  k,
-                                                                                  stream,
-                                                                                  workspace.data(),
-                                                                                  worksize);
+        fusedL2UnexpKnn<value_t, value_t, value_t, value_idx, usePrevTopKs, true, BfSampleFilterT>(
+          n_query_rows,
+          n_index_rows,
+          D,
+          lda,
+          ldb,
+          ldd,
+          query,
+          index,
+          sqrt,
+          out_dists,
+          out_inds,
+          k,
+          stream,
+          workspace.data(),
+          worksize,
+          sample_filter);
       }
       break;
     default: printf("only L2 distance metric is supported\n"); break;

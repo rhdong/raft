@@ -23,6 +23,7 @@
 #include <raft/core/resources.hpp>
 #include <raft/distance/distance_types.hpp>
 #include <raft/neighbors/detail/faiss_select/Select.cuh>
+#include <raft/neighbors/sample_filter_types.hpp>
 
 namespace raft {
 namespace spatial {
@@ -52,13 +53,19 @@ DI value_t compute_haversine(value_t x1, value_t y1, value_t x2, value_t y2)
  * @param[in] n_index_rows number of rows in index array
  * @param[in] k number of closest neighbors to return
  */
-template <typename value_idx, typename value_t, int warp_q = 1024, int thread_q = 8, int tpb = 128>
+template <typename value_idx,
+          typename value_t,
+          typename BfSampleFilterT,
+          int warp_q   = 1024,
+          int thread_q = 8,
+          int tpb      = 128>
 RAFT_KERNEL haversine_knn_kernel(value_idx* out_inds,
                                  value_t* out_dists,
                                  const value_t* index,
                                  const value_t* query,
                                  size_t n_index_rows,
-                                 int k)
+                                 int k,
+                                 BfSampleFilterT sample_filter)
 {
   constexpr int kNumWarps = tpb / WarpSize;
 
@@ -123,7 +130,9 @@ RAFT_KERNEL haversine_knn_kernel(value_idx* out_inds,
  * @param[in] k number of closest neighbors to return
  * @param[in] stream stream to order kernel launch
  */
-template <typename value_idx, typename value_t>
+template <typename value_idx,
+          typename value_t,
+          typename BfSampleFilterT = raft::neighbors::filtering::none_bf_sample_filter>
 void haversine_knn(value_idx* out_inds,
                    value_t* out_dists,
                    const value_t* index,
@@ -131,10 +140,11 @@ void haversine_knn(value_idx* out_inds,
                    size_t n_index_rows,
                    size_t n_query_rows,
                    int k,
-                   cudaStream_t stream)
+                   cudaStream_t stream,
+                   BfSampleFilterT sample_filter)
 {
   haversine_knn_kernel<<<n_query_rows, 128, 0, stream>>>(
-    out_inds, out_dists, index, query, n_index_rows, k);
+    out_inds, out_dists, index, query, n_index_rows, k, sample_filter);
 }
 
 }  // namespace detail

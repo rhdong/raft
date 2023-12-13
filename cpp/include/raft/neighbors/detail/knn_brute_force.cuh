@@ -39,6 +39,7 @@
 #include <raft/neighbors/brute_force_types.hpp>
 #include <raft/neighbors/detail/faiss_select/DistanceUtils.h>
 #include <raft/neighbors/detail/knn_merge_parts.cuh>
+#include <raft/neighbors/sample_filter_types.hpp>
 #include <raft/spatial/knn/detail/fused_l2_knn.cuh>
 #include <raft/spatial/knn/detail/haversine_distance.cuh>
 #include <raft/spatial/knn/detail/processing.cuh>
@@ -55,6 +56,7 @@ using namespace raft::spatial::knn;
  */
 template <typename ElementType      = float,
           typename IndexType        = int64_t,
+          typename BfSampleFilterT  = raft::neighbors::filtering::none_bf_sample_filter,
           typename DistanceEpilogue = raft::identity_op>
 void tiled_brute_force_knn(const raft::resources& handle,
                            const ElementType* search,  // size (m ,d)
@@ -69,6 +71,7 @@ void tiled_brute_force_knn(const raft::resources& handle,
                            float metric_arg                            = 2.0,
                            size_t max_row_tile_size                    = 0,
                            size_t max_col_tile_size                    = 0,
+                           BfSampleFilterT sample_filter               = BfSampleFilterT(),
                            DistanceEpilogue distance_epilogue          = raft::identity_op(),
                            const ElementType* precomputed_index_norms  = nullptr,
                            const ElementType* precomputed_search_norms = nullptr)
@@ -321,7 +324,8 @@ void tiled_brute_force_knn(const raft::resources& handle,
 template <typename IntType          = int,
           typename IdxType          = std::int64_t,
           typename value_t          = float,
-          typename DistanceEpilogue = raft::identity_op>
+          typename DistanceEpilogue = raft::identity_op,
+          typename BfSampleFilterT  = raft::neighbors::filtering::none_bf_sample_filter>
 void brute_force_knn_impl(
   raft::resources const& handle,
   std::vector<value_t*>& input,
@@ -339,7 +343,8 @@ void brute_force_knn_impl(
   float metricArg                     = 0,
   DistanceEpilogue distance_epilogue  = raft::identity_op(),
   std::vector<value_t*>* input_norms  = nullptr,
-  const value_t* search_norms         = nullptr)
+  const value_t* search_norms         = nullptr,
+  BfSampleFilterT sample_filter       = BfSampleFilterT())
 {
   auto userStream = resource::get_cuda_stream(handle);
 
@@ -435,7 +440,8 @@ void brute_force_knn_impl(
                  stream,
                  metric,
                  input_norms ? (*input_norms)[i] : nullptr,
-                 search_norms);
+                 search_norms,
+                 sample_filter);
 
       // Perform necessary post-processing
       if (metric == raft::distance::DistanceType::L2SqrtExpanded ||
@@ -457,7 +463,8 @@ void brute_force_knn_impl(
                  "Haversine distance requires 2 dimensions "
                  "(latitude / longitude).");
 
-          haversine_knn(out_i_ptr, out_d_ptr, input[i], search_items, sizes[i], n, k, stream);
+          haversine_knn(
+            out_i_ptr, out_d_ptr, input[i], search_items, sizes[i], n, k, stream, sample_filter);
           break;
         default:
           // Create a new handle with the current stream from the stream pool
@@ -471,22 +478,24 @@ void brute_force_knn_impl(
             raft::linalg::transpose(handle, input[i], index, sizes[i], D, stream);
           }
 
-          tiled_brute_force_knn<value_t, IdxType>(stream_pool_handle,
-                                                  search,
-                                                  index,
-                                                  n,
-                                                  sizes[i],
-                                                  D,
-                                                  k,
-                                                  out_d_ptr,
-                                                  out_i_ptr,
-                                                  metric,
-                                                  metricArg,
-                                                  0,
-                                                  0,
-                                                  distance_epilogue,
-                                                  input_norms ? (*input_norms)[i] : nullptr,
-                                                  search_norms);
+          tiled_brute_force_knn<value_t, IdxType, BfSampleFilterT>(
+            stream_pool_handle,
+            search,
+            index,
+            n,
+            sizes[i],
+            D,
+            k,
+            out_d_ptr,
+            out_i_ptr,
+            metric,
+            metricArg,
+            0,
+            0,
+            sample_filter,
+            distance_epilogue,
+            input_norms ? (*input_norms)[i] : nullptr,
+            search_norms);
           break;
       }
     }
@@ -508,13 +517,14 @@ void brute_force_knn_impl(
   if (translations == nullptr) delete id_ranges;
 };
 
-template <typename T, typename IdxT>
+template <typename T, typename IdxT, typename BfSampleFilterT>
 void brute_force_search(
   raft::resources const& res,
   const raft::neighbors::brute_force::index<T>& idx,
   raft::device_matrix_view<const T, int64_t, row_major> queries,
   raft::device_matrix_view<IdxT, int64_t, row_major> neighbors,
   raft::device_matrix_view<T, int64_t, row_major> distances,
+  BfSampleFilterT sample_filter,
   std::optional<raft::device_vector_view<const T, int64_t>> query_norms = std::nullopt)
 {
   RAFT_EXPECTS(neighbors.extent(1) == distances.extent(1), "Value of k must match for outputs");
@@ -529,22 +539,24 @@ void brute_force_search(
   std::vector<T*> norms;
   if (idx.has_norms()) { norms.push_back(const_cast<T*>(idx.norms().data_handle())); }
 
-  brute_force_knn_impl<int64_t, IdxT, T>(res,
-                                         dataset,
-                                         sizes,
-                                         d,
-                                         const_cast<T*>(queries.data_handle()),
-                                         queries.extent(0),
-                                         neighbors.data_handle(),
-                                         distances.data_handle(),
-                                         k,
-                                         true,
-                                         true,
-                                         nullptr,
-                                         idx.metric(),
-                                         idx.metric_arg(),
-                                         raft::identity_op(),
-                                         norms.size() ? &norms : nullptr,
-                                         query_norms ? query_norms->data_handle() : nullptr);
+  brute_force_knn_impl<int64_t, IdxT, T, BfSampleFilterT>(
+    res,
+    dataset,
+    sizes,
+    d,
+    const_cast<T*>(queries.data_handle()),
+    queries.extent(0),
+    neighbors.data_handle(),
+    distances.data_handle(),
+    k,
+    true,
+    true,
+    nullptr,
+    idx.metric(),
+    idx.metric_arg(),
+    raft::identity_op(),
+    norms.size() ? &norms : nullptr,
+    query_norms ? query_norms->data_handle() : nullptr,
+    sample_filter);
 }
 }  // namespace raft::neighbors::detail

@@ -716,7 +716,7 @@ rapids_export(
 # * shared test/bench headers ------------------------------------------------
 
 if(BUILD_TESTS OR BUILD_PRIMS_BENCH)
-  include(internal/CMakeLists.txt)
+  include(internal/CMakeLists.txt)e
 endif()
 
 # ##################################################################################################

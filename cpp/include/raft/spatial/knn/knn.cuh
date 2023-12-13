@@ -193,7 +193,10 @@ template <typename idx_t = int, typename value_t = float>
  * @param[in] translations starting offsets for partitions. should be the same size
  *            as input vector.
  */
-template <typename idx_t = std::int64_t, typename value_t = float, typename value_int = int>
+template <typename idx_t           = std::int64_t,
+          typename value_t         = float,
+          typename value_int       = int,
+          typename BfSampleFilterT = raft::neighbors::filtering::none_bf_sample_filter>
 void brute_force_knn(raft::resources const& handle,
                      std::vector<value_t*>& input,
                      std::vector<value_int>& sizes,
@@ -207,7 +210,8 @@ void brute_force_knn(raft::resources const& handle,
                      bool rowMajorQuery               = true,
                      std::vector<idx_t>* translations = nullptr,
                      distance::DistanceType metric    = distance::DistanceType::L2Unexpanded,
-                     float metric_arg                 = 2.0f)
+                     float metric_arg                 = 2.0f,
+                     BfSampleFilterT sample_filter)
 {
   ASSERT(input.size() == sizes.size(), "input and sizes vectors must be the same size");
 
