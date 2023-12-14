@@ -357,7 +357,7 @@ void search(raft::resources const& res,
 {
   raft::neighbors::detail::
     brute_force_search<T, IdxT, raft::neighbors::filtering::none_bf_sample_filter>(
-      res, idx, queries, neighbors, distances, raft::neighbors::filtering::none_bf_sample_filter());
+      res, idx, queries, neighbors, distances, raft::neighbors::filtering::brute_force_filter());
 }
 
 /**
@@ -373,7 +373,7 @@ void search(raft::resources const& res,
  * [n_queries, k]
  * @param[out] distances a device matrix view to the distances to the selected neighbors [n_queries,
  * k]
- * @param[in] filter a filter the green lights for a given query
+ * @param[in] filter an awsome filter!
  */
 template <typename T, typename IdxT>
 void search_with_filtering(raft::resources const& res,
@@ -381,7 +381,7 @@ void search_with_filtering(raft::resources const& res,
                            raft::device_matrix_view<const T, int64_t, row_major> queries,
                            raft::device_matrix_view<IdxT, int64_t, row_major> neighbors,
                            raft::device_matrix_view<T, int64_t, row_major> distances,
-                           raft::bitmap_filter& filter)
+                           raft::neighbors::filtering::brute_force_filter& filter)
 {
   raft::neighbors::detail::brute_force_search<T, IdxT>(
     res, idx, queries, neighbors, distances, filter);

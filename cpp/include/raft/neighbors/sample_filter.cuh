@@ -47,23 +47,34 @@ struct bitset_filter {
 };
 
 /**
- * @brief Filter an index with a bitmap
+ * @brief The pre-filter for the brute_force algorithm
  *
  * @tparam index_t Indexing type
  */
 template <typename index_t>
-struct bitmap_filter {
-  using bitmap_t = std::uint32_t;
-  const raft::core::bitset_view<bitmap_t, index_t> bitmap_view_;
+struct brute_force_filter {
+  static constexpr int kNone   = 0;  ///< No filtering mode.
+  static constexpr int kBitmap = 1;  ///< Filtering by bitmap mode.
 
-  bitmap_filter(const raft::core::bitset_view<bitmap_t, index_t> bitmap_for_filtering)
-    : bitmap_view_{bitmap_for_filtering}
+  using bitmap_t = std::uint32_t;
+
+  brute_force_filter() : filter_type{kNone} {}
+
+  brute_force_filter(const raft::core::bitset_view<bitmap_t, index_t> bitmap_for_filtering)
+    : brute_force_filter{bitmap_for_filtering}, filter_type{kBitmap}
   {
   }
+
   inline _RAFT_HOST_DEVICE bool operator()(const index_t sample_id, const index_t query_id) const
   {
-    return bitmap_view_.test(sample_id, query_id);
+    return (filter_type == kNone) || bitmap_view_.test(sample_id, query_id);
   }
+
+ public:
+  const int filter_type;
+
+ private:
+  const raft::core::bitset_view<bitmap_t, index_t> bitmap_view_;
 };
 
 }  // namespace raft::neighbors::filtering
