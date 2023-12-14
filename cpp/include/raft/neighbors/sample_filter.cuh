@@ -46,4 +46,24 @@ struct bitset_filter {
   }
 };
 
+/**
+ * @brief Filter an index with a bitmap
+ *
+ * @tparam index_t Indexing type
+ */
+template <typename index_t>
+struct bitmap_filter {
+  using bitmap_t = std::uint32_t;
+  const raft::core::bitset_view<bitmap_t, index_t> bitmap_view_;
+
+  bitmap_filter(const raft::core::bitset_view<bitmap_t, index_t> bitmap_for_filtering)
+    : bitmap_view_{bitmap_for_filtering}
+  {
+  }
+  inline _RAFT_HOST_DEVICE bool operator()(const index_t sample_id, const index_t query_id) const
+  {
+    return bitmap_view_.test(sample_id, query_id);
+  }
+};
+
 }  // namespace raft::neighbors::filtering

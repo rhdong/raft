@@ -108,7 +108,7 @@ struct CagraBench : public fixture {
 
     auto queries_v = make_const_mdspan(queries_.view());
     if (params_.removed_ratio > 0) {
-      auto filter = raft::neighbors::filtering::bitset_filter(removed_indices_bitset_.view());
+      auto filter = raft::neighbors::filtering::bitset_filter(.view());
       loop_on_state(state, [&]() {
         raft::neighbors::cagra::search_with_filtering(
           this->handle, search_params, *this->index_, queries_v, ind_v, dist_v, filter);

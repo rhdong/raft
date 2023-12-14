@@ -53,8 +53,8 @@ TEST_F(MaskedMatmulTest, BasicMultiplication)
   std::vector<float> h_C_expected = {19, 22, 43, 50};  // Expected result of A*B
 
   // Create device matrices
-  raft::device_matrix<float> d_A(m, k, handle.get_stream());Í
-  raft::device_matrix<float> d_B(k, n, handle.get_stream());
+  raft::device_matrix<float> d_A(m, k, handle.get_stream());
+  Í raft::device_matrix<float> d_B(k, n, handle.get_stream());
   raft::device_matrix<float> d_C(m, n, handle.get_stream());
 
   // Copy data to device

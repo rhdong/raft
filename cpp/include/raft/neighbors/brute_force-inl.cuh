@@ -373,18 +373,18 @@ void search(raft::resources const& res,
  * [n_queries, k]
  * @param[out] distances a device matrix view to the distances to the selected neighbors [n_queries,
  * k]
- * @param[in] sample_filter a filter the greenlights samples for a given query
+ * @param[in] filter a filter the green lights for a given query
  */
-template <typename T, typename IdxT, typename BfSampleFilterT>
+template <typename T, typename IdxT>
 void search_with_filtering(raft::resources const& res,
                            const index<T>& idx,
                            raft::device_matrix_view<const T, int64_t, row_major> queries,
                            raft::device_matrix_view<IdxT, int64_t, row_major> neighbors,
                            raft::device_matrix_view<T, int64_t, row_major> distances,
-                           BfSampleFilterT sample_filter = BfSampleFilterT())
+                           raft::bitmap_filter& filter)
 {
-  raft::neighbors::detail::brute_force_search<T, IdxT, BfSampleFilterT>(
-    res, idx, queries, neighbors, distances, sample_filter);
+  raft::neighbors::detail::brute_force_search<T, IdxT>(
+    res, idx, queries, neighbors, distances, filter);
 }
 
 /** @} */  // end group brute_force_knn
