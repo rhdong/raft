@@ -28,23 +28,52 @@ namespace raft {
 namespace linalg {
 namespace detail {
 
-template <typename T>
-void masked_matmul(const raft::handle_t& handle,
-                   const raft::device_matrix<T>& A,
-                   const raft::device_matrix<T>& B,
-                   raft::device_matrix<T>& C,
+template <typename value_type, typename index_type = int64_t>
+void masked_matmul(raft::resources const& res,
+                   const raft::device_matrix_view<const value_type, index_type, row_major>& A,
+                   const raft::device_matrix_view<const value_type, index_type, row_major>& B,
+                   raft::device_matrix_view<value_type, index_type, row_major>& C,
                    const raft::core::bitset& mask)
 {
-  cusparseSpMatDescr_t mask;
+    std::vector<value_idx> indptr_h  = params.indptr_h;
+    std::vector<value_idx> indices_h = params.indices_h;
+    std::vector<value_t> data_h      = params.data_h;
 
-  mask.to_csr(mask, )
-    RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsecreatecsr(&matA,
-                                                              nrows_,
-                                                              ncols_,
-                                                              nnz_,
-                                                              const_cast<index_type*>(row_offsets_),
-                                                              const_cast<index_type*>(col_indices_),
-                                                              const_cast<value_type*>(values_)));
+    auto stream = resource::get_cuda_stream(handle);
+    indptr.resize(indptr_h.size(), stream);
+    indices.resize(indices_h.size(), stream);
+    data.resize(data_h.size(), stream);
+
+    auto converted_C = raft::device_csr_matrix_view<value_type, index_type, row_major> bitset::to_csr();
+    /*
+    #include <thrust/scan.h>
+
+    int data[6] = {1, 0, 2, 2, 1, 3};
+
+    thrust::exclusive_scan(data, data + 6, data); // in-place scan
+    */
+
+    auto x_structure = raft::make_device_compressed_structure_view<value_idx, value_idx, value_idx>(
+      indptr.data(),
+      indices.data(),
+      static_cast<value_idx>(params.indptr_h.size() - 1),
+      params.n_cols,
+      static_cast<value_idx>(params.indices_h.size()));
+    auto x = raft::make_device_csr_matrix_view<const value_t>(data.data(), x_structure);
+
+  raft::device_csr_matrix_view<ValueType, int, int, NZType> C =
+    mask.to_csr(mask, raft::resource::get_cuda_stream(res));
+
+  RAFT_CUSPARSE_TRY(raft::sparse::detail::sddmm(res,
+                                                trans_x,
+                                                trans_y,
+                                                static_cast<const ValueType>(1.0),
+                                                A,
+                                                B,
+                                                static_cast<const ValueType>(0.0),
+                                                converted_C));
+
+  RAFT_CUDA_TRY(cudaPeekAtLastError());
 }
 
 }  // namespace detail

@@ -25,14 +25,14 @@
 namespace raft {
 namespace linalg {
 
-template <typename T>
-void masked_matmul(const raft::handle_t& handle,
-                   const raft::device_matrix<T>& A,
-                   const raft::device_matrix<T>& B,
-                   raft::device_matrix<T>& C,
+template <typename value_type, typename index_type = int64_t>
+void masked_matmul(raft::resources const& res,
+                   const raft::device_matrix_view<const value_type, index_type, row_major>& A,
+                   const raft::device_matrix_view<const value_type, index_type, row_major>& B,
+                   raft::device_matrix_view<value_type, index_type, row_major>& C,
                    const raft::core::bitset& bitmap)
 {
-  detail::masked_matmul(handle, A, B, C, mask);
+  detail::masked_matmul(res, A, B, C, mask);
 }
 
 }  // namespace linalg
