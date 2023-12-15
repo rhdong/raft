@@ -202,15 +202,18 @@ struct bitset_view {
     }
   }
 
-  inline _RAFT_HOST_DEVICE void to_csr(cusparseSpMatDescr_t& matDescr, cudaStream_t stream)
+  template <typename ValueT = float>
+  inline _RAFT_HOST_DEVICE void to_csr(cusparseSpMatDescr_t& matDescr,
+                                       ValueT* d_values,
+                                       cudaStream_t stream)
   {
     assert(num_rows_ * num_cols_ <= (bitset_len_ * 8);
     int64_t nnz = count_nnz(d_bits, bitset_len_, stream);
     int64_t *d_row_offsets, *d_col_indices;
-    float* d_values;
+    ValueT* d_values;
     cudaMalloc(&d_row_offsets, (num_rows_ + 1) * sizeof(int64_t));
     cudaMalloc(&d_col_indices, nnz * sizeof(int64_t));  // Max possible non-zero elements
-    cudaMalloc(&d_values, nnz * sizeof(float));
+    cudaMalloc(&d_values, nnz * sizeof(ValueT));
 
     cudaMemset(d_row_offsets, 0, (num_rows_ + 1) * sizeof(int64_t));
 
@@ -220,7 +223,7 @@ struct bitset_view {
     to_csr_kernel<<<grid_size, block_size, 0, stream>>>(
       bitset_ptr_, d_row_offsets, d_col_indices, d_values, num_rows_ * num_cols_);
 
-    // TODO(james): switch to raft::core::cusparsecreatecsr.
+    // TODO(james): switch to raft::core::detail::cusparsecreatecsr.
     cusparseCreateCsr(&matDescr,
                       num_rows_,
                       num_cols_,
