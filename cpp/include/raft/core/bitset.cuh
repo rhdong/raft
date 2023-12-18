@@ -40,6 +40,7 @@ namespace raft::core {
  * @tparam bitset_t Underlying type of the bitset array. Default is uint32_t.
  * @tparam index_t Indexing type used. Default is uint32_t.
  */
+// TODO(James): The default of `index_t` should be int64_t or uint64_t?
 template <typename bitset_t = uint32_t, typename index_t = uint32_t>
 struct bitset_view {
   static constexpr index_t bitset_element_size = sizeof(bitset_t) * 8;
@@ -128,9 +129,118 @@ struct bitset_view {
     return raft::make_device_vector_view<const bitset_t, index_t>(bitset_ptr_, n_elements());
   }
 
+  /**
+   * @brief Device function to set a given index to set_value in the bitset.
+   *
+   * @param sample_index index to set
+   * @param set_value Value to set the bit to (true or false)
+   */
+  inline _RAFT_DEVICE void set(const index_t sample_index,
+                               const index_t query_index,
+                               bool set_value) const
+  {
+    const index_t global_index = sample_index * num_rows_ + query_index;
+    set(global_index, set_value);
+  }
+
+  inline _RAFT_DEVICE auto test(const index_t sample_index, const index_t query_index) const -> bool
+  {
+    const index_t global_index = sample_index * num_rows_ + query_index;
+    return test(global_index);
+  }
+
+  __global__ void count_nnz_kernel(const bitset_t* bits, int64_t* count, index_t bitset_len)
+  {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx < bitset_len) { count[idx] = __popc(bits[idx]); }
+  }
+
+  inline int64_t count_nnz(const uint32_t* d_bits, int num_ints, cudaStream_t stream)
+  {
+    int64_t* d_count;
+    cudaMalloc(&d_count, num_ints * sizeof(int64_t));
+    cudaMemset(d_count, 0, num_ints * sizeof(int64_t));
+
+    int block_size = 256;
+    int grid_size  = (num_ints + block_size - 1) / block_size;
+
+    count_nnz_kernel<<<grid_size, block_size, 0, stream>>>(d_bits, d_count, bitset_len_);
+    cudaStreamSynchronize(stream);
+
+    /* TODO(james): switch to
+        `thrust::reduce(thrust_par(thrust_allocator_).on(stream),
+                        size_ptr + start_i, size_ptr + end_i, 0,
+                        thrust::plus<int>());`
+    */
+    std::vector<int64_t> h_count(num_ints);
+    cudaMemcpy(h_count.data(), d_count, num_ints * sizeof(int64_t), cudaMemcpyDeviceToHost);
+
+    int64_t nzz = std::accumulate(h_count.begin(), h_count.end(), 0);
+
+    cudaFree(d_count);
+    return nzz;
+  }
+
+  __global__ void to_csr_kernel(const bitset_t* bits,
+                                int64_t* row_offsets,
+                                int64_t* column_indices,
+                                float* values,
+                                int num_rows,
+                                int N)
+  {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (idx < N) {
+      int64_t row = idx / num_cols_;
+      int64_t col = idx % num_cols_;
+      // TODO(james): wrong work
+      if (bits[idx / 32] & (1 << (idx % 32))) {
+        index_t offset         = atomicAdd(&row_offsets[row + 1], 1);
+        column_indices[offset] = col;
+        values[offset]         = 1.0f;
+      }
+    }
+  }
+
+  inline _RAFT_HOST_DEVICE void to_csr(cusparseSpMatDescr_t& matDescr, cudaStream_t stream)
+  {
+    assert(num_rows_ * num_cols_ <= (bitset_len_ * 8);
+    int64_t nnz = count_nnz(d_bits, bitset_len_, stream);
+    int64_t *d_row_offsets, *d_col_indices;
+    float* d_values;
+    cudaMalloc(&d_row_offsets, (num_rows_ + 1) * sizeof(int64_t));
+    cudaMalloc(&d_col_indices, nnz * sizeof(int64_t));  // Max possible non-zero elements
+    cudaMalloc(&d_values, nnz * sizeof(float));
+
+    cudaMemset(d_row_offsets, 0, (num_rows_ + 1) * sizeof(int64_t));
+
+    int block_size = 256;
+    int grid_size  = (nnz + block_size - 1) / block_size;
+
+    to_csr_kernel<<<grid_size, block_size, 0, stream>>>(
+      bitset_ptr_, d_row_offsets, d_col_indices, d_values, num_rows_ * num_cols_);
+
+    // TODO(james): switch to raft::core::cusparsecreatecsr.
+    cusparseCreateCsr(&matDescr,
+                      num_rows_,
+                      num_cols_,
+                      nnz,
+                      d_row_offsets,
+                      d_col_indices,
+                      d_values,
+                      CUSPARSE_INDEX_64I,
+                      CUSPARSE_INDEX_64I,
+                      CUSPARSE_INDEX_BASE_ZERO,
+                      CUDA_R_32F);
+  }
+
  private:
   bitset_t* bitset_ptr_;
   index_t bitset_len_;
+
+  // TODO(james): for bitmap
+  index_t num_rows_;
+  index_t num_cols_;
 };
 
 /**
@@ -396,3 +506,4 @@ struct bitset {
 
 /** @} */
 }  // end namespace raft::core
+Ï

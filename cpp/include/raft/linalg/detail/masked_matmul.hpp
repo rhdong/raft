@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.
+ * Copyright (c) 2023, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,19 +28,19 @@ namespace linalg {
 namespace detail {
 
 template <typename T, bool DevicePointerMode = false>
-void gemm(raft::resources const& handle,
-          T* z,
-          T* x,
-          T* y,
-          int _M,
-          int _N,
-          int _K,
-          bool isZColMajor,
-          bool isXColMajor,
-          bool isYColMajor,
-          cudaStream_t stream,
-          T* alpha,
-          T* beta)
+void masked_matmul(raft::resources const& handle,
+                   T* z,
+                   T* x,
+                   T* y,
+                   int _M,
+                   int _N,
+                   int _K,
+                   bool isZColMajor,
+                   bool isXColMajor,
+                   bool isYColMajor,
+                   cudaStream_t stream,
+                   T* alpha,
+                   T* beta)
 {
   auto cublas_h = raft::resource::get_cublas_handle(handle);
   cublas_device_pointer_mode<DevicePointerMode> pmode(cublas_h);

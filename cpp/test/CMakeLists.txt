@@ -227,6 +227,7 @@ if(BUILD_TESTS)
     test/linalg/gemv.cu
     test/linalg/map.cu
     test/linalg/map_then_reduce.cu
+    test/linalg/masked_matmul.cu
     test/linalg/matrix_vector.cu
     test/linalg/matrix_vector_op.cu
     test/linalg/mean_squared_error.cu
