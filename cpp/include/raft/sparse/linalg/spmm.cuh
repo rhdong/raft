@@ -19,6 +19,7 @@
 #pragma once
 
 #include "detail/spmm.hpp"
+#include <raft/sparse/linalg/detail/utils.cuh>
 
 namespace raft {
 namespace sparse {
