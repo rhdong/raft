@@ -79,17 +79,17 @@ void sddmm(raft::resources const& handle,
                                                    resource::get_cuda_stream(handle)));
   raft::interruptible::synchronize(resource::get_cuda_stream(handle));
   auto tmp = raft::make_device_vector<ValueType>(handle, bufferSize);
-  RAFT_CUSPARSE_TRY(
-    raft::sparse::detail::cusparseSDDMM_preprocess(resource::get_cusparse_handle(handle),
-                                                   opA,
-                                                   opB,
-                                                   alpha,
-                                                   descr_a,
-                                                   descr_b,
-                                                   beta,
-                                                   descr_c,
-                                                   alg,
-                                                   tmp.data_handle()));
+//  RAFT_CUSPARSE_TRY(
+//    raft::sparse::detail::cusparseSDDMM_preprocess(resource::get_cusparse_handle(handle),
+//                                                   opA,
+//                                                   opB,
+//                                                   alpha,
+//                                                   descr_a,
+//                                                   descr_b,
+//                                                   beta,
+//                                                   descr_c,
+//                                                   alg,
+//                                                   tmp.data_handle()));
 
   RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsesddmm(resource::get_cusparse_handle(handle),
                                                         opA,
