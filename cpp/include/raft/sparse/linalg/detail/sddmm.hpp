@@ -58,8 +58,9 @@ void sddmm(raft::resources const& handle,
            const ValueType* beta)
 {
   auto opA = CUSPARSE_OPERATION_NON_TRANSPOSE;
-  auto opB = (is_row_major_a != is_row_major_b) ? CUSPARSE_OPERATION_NON_TRANSPOSE
-                                                : CUSPARSE_OPERATION_TRANSPOSE;
+  auto opB = CUSPARSE_OPERATION_NON_TRANSPOSE;
+  //  auto opB = (is_row_major_a != is_row_major_b) ? CUSPARSE_OPERATION_NON_TRANSPOSE
+  //                                                : CUSPARSE_OPERATION_TRANSPOSE;
 
   auto alg = CUSPARSE_SDDMM_ALG_DEFAULT;
   size_t bufferSize;
@@ -76,10 +77,19 @@ void sddmm(raft::resources const& handle,
                                                    alg,
                                                    &bufferSize,
                                                    resource::get_cuda_stream(handle)));
-
   raft::interruptible::synchronize(resource::get_cuda_stream(handle));
-
-  rmm::device_uvector<ValueType> tmp(bufferSize, resource::get_cuda_stream(handle));
+  auto tmp = raft::make_device_vector<ValueType>(handle, bufferSize);
+  RAFT_CUSPARSE_TRY(
+    raft::sparse::detail::cusparseSDDMM_preprocess(resource::get_cusparse_handle(handle),
+                                                   opA,
+                                                   opB,
+                                                   alpha,
+                                                   descr_a,
+                                                   descr_b,
+                                                   beta,
+                                                   descr_c,
+                                                   alg,
+                                                   tmp.data_handle()));
 
   RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsesddmm(resource::get_cusparse_handle(handle),
                                                         opA,
@@ -90,7 +100,7 @@ void sddmm(raft::resources const& handle,
                                                         beta,
                                                         descr_c,
                                                         alg,
-                                                        tmp.data(),
+                                                        tmp.data_handle(),
                                                         resource::get_cuda_stream(handle)));
 }
 

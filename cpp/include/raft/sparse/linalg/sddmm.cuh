@@ -54,7 +54,7 @@ template <typename ValueType,
 void sddmm(raft::resources const& handle,
            raft::device_matrix_view<const ValueType, IndexType, LayoutPolicyA> a,
            raft::device_matrix_view<const ValueType, IndexType, LayoutPolicyB> b,
-           raft::device_csr_matrix_view<ValueType, int, int, NZType> c,
+           raft::device_csr_matrix_view<ValueType, int64_t, int64_t, NZType> c,
            raft::host_scalar_view<ValueType> alpha,
            raft::host_scalar_view<ValueType> beta)
 {

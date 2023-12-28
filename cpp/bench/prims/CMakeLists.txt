@@ -109,14 +109,7 @@ if(BUILD_PRIMS_BENCH)
     NAME
     LINALG_BENCH
     PATH
-    bench/prims/linalg/add.cu
-    bench/prims/linalg/map_then_reduce.cu
-    bench/prims/linalg/matrix_vector_op.cu
-    bench/prims/linalg/norm.cu
-    bench/prims/linalg/normalize.cu
-    bench/prims/linalg/reduce_cols_by_key.cu
-    bench/prims/linalg/reduce_rows_by_key.cu
-    bench/prims/linalg/reduce.cu
+    bench/prims/linalg/sddmm.cu
     bench/prims/main.cpp
   )
 
