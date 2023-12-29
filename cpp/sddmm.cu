@@ -64,18 +64,21 @@ struct SDDMMBenchParams {
 };
 
 void convert_to_csr(
-  std::vector<bool>& matrix, size_t rows, size_t cols, float* values, int* indices, int* indptr)
+  bool* matrix, size_t rows, size_t cols, float* values, int* indices, int* indptr)
 {
-  indptr.push_back(0);
+  int offset_indptr       = 0;
+  int offset_values       = 0;
+  indptr[offset_indptr++] = 0;
 
   for (size_t i = 0; i < rows; ++i) {
     for (size_t j = 0; j < cols; ++j) {
       if (matrix[i * cols + j]) {
-        values.push_back(static_cast<float>(1.0f));
-        indices.push_back(static_cast<int>(j));
+        values[offset_values]  = static_cast<float>(1.0f);
+        indices[offset_values] = static_cast<int>(j);
+        offset_values++;
       }
     }
-    indptr.push_back(static_cast<int>(values.size()));
+    indptr[offset_indptr++] = static_cast<int>(values.size());
   }
 }
 
