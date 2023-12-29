@@ -220,7 +220,7 @@ int test_main(SDDMMBenchParams& params, Timer<double>& timer)
   cudaStream_t stream;
 
   CHECK_CUDA(cudaStreamCreate(&stream));
-  CHECK_CUSPARSEcusparseSetStream(handle, stream));
+  CHECK_CUSPARSE(cusparseSetStream(handle, stream));
   timer.start();
   CHECK_CUSPARSE(cusparseSDDMM(handle,
                                CUSPARSE_OPERATION_NON_TRANSPOSE,
