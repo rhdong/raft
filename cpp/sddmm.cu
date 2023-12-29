@@ -2,6 +2,7 @@
 #include <cuda_runtime_api.h>  // cudaMalloc, cudaMemcpy, etc.
 #include <cusparse.h>          // cusparseSpMM
 #include <random>
+#include <iostream>
 #include <stdio.h>   // printf
 #include <stdlib.h>  // EXIT_FAILURE
 
@@ -78,7 +79,7 @@ void convert_to_csr(
         offset_values++;
       }
     }
-    indptr[offset_indptr++] = static_cast<int>(values.size());
+    indptr[offset_indptr++] = static_cast<int>(offset_values);
   }
 }
 
