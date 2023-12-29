@@ -1,8 +1,8 @@
 #include <chrono>
 #include <cuda_runtime_api.h>  // cudaMalloc, cudaMemcpy, etc.
 #include <cusparse.h>          // cusparseSpMM
-#include <random>
 #include <iostream>
+#include <random>
 #include <stdio.h>   // printf
 #include <stdlib.h>  // EXIT_FAILURE
 
@@ -121,7 +121,7 @@ void uniform(float* array, int size)
   }
 }
 
-void test_main(SDDMMBenchParams& params, Timer<double>& timer)
+int test_main(SDDMMBenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
   int A_num_rows = params.m;
@@ -139,7 +139,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   uniform(hA, A_size);
   uniform(hB, B_size);
 
-  bool c_dense_data_h* = (float*)malloc(sizeof(bool) * C_size);
+  bool* c_dense_data_h = (bool*)malloc(sizeof(bool) * C_size);
 
   size_t c_true_nnz = create_sparse_matrix(A_num_rows, B_num_cols, params.sparsity, c_dense_data_h);
 
@@ -152,18 +152,18 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   // Device memory management
   int *dC_offsets, *dC_columns;
   float *dC_values, *dB, *dA;
-  CHECK_CUDA(cudaMalloc((void**)&dA, A_size * sizeof(float)))
-  CHECK_CUDA(cudaMalloc((void**)&dB, B_size * sizeof(float)))
-  CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (A_num_rows + 1) * sizeof(int)))
-  CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int)))
-  CHECK_CUDA(cudaMalloc((void**)&dC_values, c_true_nnz * sizeof(float)))
+  CHECK_CUDA(cudaMalloc((void**)&dA, A_size * sizeof(float)));
+  CHECK_CUDA(cudaMalloc((void**)&dB, B_size * sizeof(float)));
+  CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (A_num_rows + 1) * sizeof(int)));
+  CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int)));
+  CHECK_CUDA(cudaMalloc((void**)&dC_values, c_true_nnz * sizeof(float)));
 
-  CHECK_CUDA(cudaMemcpy(dA, hA, A_size * sizeof(float), cudaMemcpyHostToDevice))
-  CHECK_CUDA(cudaMemcpy(dB, hB, B_size * sizeof(float), cudaMemcpyHostToDevice))
+  CHECK_CUDA(cudaMemcpy(dA, hA, A_size * sizeof(float), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(dB, hB, B_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(
-    cudaMemcpy(dC_offsets, hC_offsets, (A_num_rows + 1) * sizeof(int), cudaMemcpyHostToDevice))
-  CHECK_CUDA(cudaMemcpy(dC_columns, hC_columns, c_true_nnz * sizeof(int), cudaMemcpyHostToDevice))
-  CHECK_CUDA(cudaMemcpy(dC_values, hC_values, c_true_nnz * sizeof(float), cudaMemcpyHostToDevice))
+    cudaMemcpy(dC_offsets, hC_offsets, (A_num_rows + 1) * sizeof(int), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(dC_columns, hC_columns, c_true_nnz * sizeof(int), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(dC_values, hC_values, c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
   //--------------------------------------------------------------------------
   // CUSPARSE APIs
   cusparseHandle_t handle = NULL;
