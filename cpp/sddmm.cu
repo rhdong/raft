@@ -29,10 +29,10 @@
     }                                                                \
   }
 enum class TimeUnit {
-  Second = 0,
+  Second      = 0,
   MilliSecond = 3,
   MicroSecond = 6,
-  NanoSecond = 9,
+  NanoSecond  = 9,
 };
 
 template <typename Rep>
@@ -114,7 +114,7 @@ void uniform(float* array, int size)
   std::mt19937 eng(rd());
   std::uniform_real_distribution<> distr(0.0, 1.0);
 
-  std::vector<float> randomArray(arraySize);
+  std::vector<float> randomArray(size);
 
   for (int i = 0; i < size; ++i) {
     randomArray[i] = static_cast<float>(distr(eng));
@@ -133,8 +133,8 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   int A_size     = lda * A_num_rows;
   int B_size     = ldb * B_num_rows;
   int C_size     = A_num_rows * B_num_cols;
-  float hA*      = malloc(sizeof(float) * A_size);
-  float hB*      = malloc(sizeof(float) * B_size);
+  float* hA      = malloc(sizeof(float) * A_size);
+  float* hB      = malloc(sizeof(float) * B_size);
 
   uniform(hA, A_size);
   uniform(hB, B_size);
