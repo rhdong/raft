@@ -269,7 +269,7 @@ int main(void)
   auto timer = Timer<double>();
   for (auto params : cases) {
     test_main(params, timer);
-    std::cout << time.getResult() << std::endl;
+    std::cout << timer.getResult() << std::endl;
   }
   return EXIT_SUCCESS;
 }
