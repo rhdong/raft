@@ -128,11 +128,11 @@ int test_main(SDDMMBenchParams& params, Timer<double>& timer)
   int A_num_cols = params.k;
   int B_num_rows = params.k;
   int B_num_cols = params.n;
-  int lda        = params.m;
-  int ldb        = params.n;
+  int lda        = params.k;
+  int ldb        = params.k;
   int A_size     = params.m * params.k;
   int B_size     = params.k * params.n;
-  int C_size     = A_num_rows * B_num_cols;
+  int C_size     = params.m * params.n;
   float* hA      = (float*)malloc(sizeof(float) * A_size);
   float* hB      = (float*)malloc(sizeof(float) * B_size);
 
