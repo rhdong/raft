@@ -63,12 +63,8 @@ struct SDDMMBenchParams {
   float beta  = 0.0;
 };
 
-void convert_to_csr(std::vector<bool>& matrix,
-                    size_t rows,
-                    size_t cols,
-                    std::vector<float>& values,
-                    std::vector<int>& indices,
-                    std::vector<int>& indptr)
+void convert_to_csr(
+  std::vector<bool>& matrix, size_t rows, size_t cols, float* values, int* indices, int* indptr)
 {
   indptr.push_back(0);
 
@@ -133,19 +129,19 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   int A_size     = lda * A_num_rows;
   int B_size     = ldb * B_num_rows;
   int C_size     = A_num_rows * B_num_cols;
-  float* hA      = malloc(sizeof(float) * A_size);
-  float* hB      = malloc(sizeof(float) * B_size);
+  float* hA      = (float*)malloc(sizeof(float) * A_size);
+  float* hB      = (float*)malloc(sizeof(float) * B_size);
 
   uniform(hA, A_size);
   uniform(hB, B_size);
 
-  float c_dense_data_h* = malloc(sizeof(bool) * C_size);
+  bool c_dense_data_h* = (float*)malloc(sizeof(bool) * C_size);
 
   size_t c_true_nnz = create_sparse_matrix(A_num_rows, B_num_cols, params.sparsity, c_dense_data_h);
 
-  int* hC_offsets  = malloc(sizeof(int) * (params.m + 1));
-  int* hC_columns  = malloc(sizeof(int) * c_true_nnz);
-  float* hC_values = malloc(sizeof(float) * c_true_nnz);
+  int* hC_offsets  = (int*)malloc(sizeof(int) * (params.m + 1));
+  int* hC_columns  = (int*)malloc(sizeof(int) * c_true_nnz);
+  float* hC_values = (float*)malloc(sizeof(float) * c_true_nnz);
 
   convert_to_csr(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
   //--------------------------------------------------------------------------
