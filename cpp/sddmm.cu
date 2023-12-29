@@ -53,27 +53,27 @@ struct SDDMMBenchParams {
   size_t k;  // k parameter of the SDDMM
   size_t n;  // n parameter of the SDDMM
   float sparsity;
-  ValueType alpha = 1.0;
-  ValueType beta  = 0.0;
+  float alpha = 1.0;
+  float beta  = 0.0;
 };
 
 void convert_to_csr(std::vector<bool>& matrix,
                     size_t rows,
                     size_t cols,
-                    std::vector<ValueType>& values,
-                    std::vector<IndexType>& indices,
-                    std::vector<IndexType>& indptr)
+                    std::vector<float>& values,
+                    std::vector<int>& indices,
+                    std::vector<int>& indptr)
 {
   indptr.push_back(0);
 
   for (size_t i = 0; i < rows; ++i) {
     for (size_t j = 0; j < cols; ++j) {
       if (matrix[i * cols + j]) {
-        values.push_back(static_cast<ValueType>(1.0f));
-        indices.push_back(static_cast<IndexType>(j));
+        values.push_back(static_cast<float>(1.0f));
+        indices.push_back(static_cast<int>(j));
       }
     }
-    indptr.push_back(static_cast<IndexType>(values.size()));
+    indptr.push_back(static_cast<int>(values.size()));
   }
 }
 
