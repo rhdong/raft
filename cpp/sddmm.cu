@@ -219,6 +219,7 @@ int test_main(SDDMMBenchParams& params, Timer<double>& timer)
   // execute SpMM
   cudaStream_t stream;
 
+  CHECK_CUDA(cudaDeviceSynchronize())
   CHECK_CUDA(cudaStreamCreate(&stream));
   CHECK_CUSPARSE(cusparseSetStream(handle, stream));
   timer.start();
