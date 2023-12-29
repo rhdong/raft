@@ -126,12 +126,12 @@ int test_main(SDDMMBenchParams& params, Timer<double>& timer)
   // Host problem definition
   int A_num_rows = params.m;
   int A_num_cols = params.k;
-  int B_num_rows = A_num_cols;
+  int B_num_rows = params.k;
   int B_num_cols = params.n;
-  int lda        = A_num_cols;
-  int ldb        = B_num_cols;
-  int A_size     = lda * A_num_rows;
-  int B_size     = ldb * B_num_rows;
+  int lda        = params.m;
+  int ldb        = params.n;
+  int A_size     = params.m * params.k;
+  int B_size     = params.k * params.n;
   int C_size     = A_num_rows * B_num_cols;
   float* hA      = (float*)malloc(sizeof(float) * A_size);
   float* hB      = (float*)malloc(sizeof(float) * B_size);
