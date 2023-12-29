@@ -28,10 +28,16 @@
       return EXIT_FAILURE;                                           \
     }                                                                \
   }
+enum class TimeUnit {
+  Second = 0,
+  MilliSecond = 3,
+  MicroSecond = 6,
+  NanoSecond = 9,
+};
 
 template <typename Rep>
 struct Timer {
-  explicit Timer(TimeUnit tu = TimeUnit::Second) : tu_(tu) {}
+  explicit Timer(TimeUnit tu = TimeUnit::MilliSecond) : tu_(tu) {}
   void start() { startRecord = std::chrono::steady_clock::now(); }
   void end() { endRecord = std::chrono::steady_clock::now(); }
   Rep getResult()
@@ -263,6 +269,7 @@ int main(void)
   auto timer = Timer<double>();
   for (auto params : cases) {
     test_main(params, timer);
+    std::cout << time.getResult() << std::endl;
   }
   return EXIT_SUCCESS;
 }
