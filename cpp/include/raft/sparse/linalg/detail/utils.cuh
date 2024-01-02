@@ -40,6 +40,7 @@ cusparseDnMatDescr_t create_descriptor(
 {
   auto order   = is_row_major ? CUSPARSE_ORDER_ROW : CUSPARSE_ORDER_COL;
   IndexType ld = is_row_major ? dense_view.stride(0) : dense_view.stride(1);
+  std::cout << "is_row_major: " << is_row_major << ", ld" << ld << std::endl;
   cusparseDnMatDescr_t descr;
   RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsecreatednmat(
     &descr,
