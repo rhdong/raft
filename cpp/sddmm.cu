@@ -141,26 +141,26 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
   std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
 
-  int* hC_offsets  = (int*)malloc(sizeof(int) * (params.m + 1));
-  int* hC_columns  = (int*)malloc(sizeof(int) * c_true_nnz);
+  int64_t* hC_offsets  = (int64_t*)malloc(sizeof(int64_t) * (params.m + 1));
+  int64_t* hC_columns  = (int64_t*)malloc(sizeof(int64_t) * c_true_nnz);
   float* hC_values = (float*)malloc(sizeof(float) * c_true_nnz);
 
   convert_to_csr(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
   //--------------------------------------------------------------------------
   // Device memory management
-  int *dC_offsets, *dC_columns;
+  int64_t *dC_offsets, *dC_columns;
   float *dC_values, *dB, *dA;
   CHECK_CUDA(cudaMalloc((void**)&dA, A_size * sizeof(float)));
   CHECK_CUDA(cudaMalloc((void**)&dB, B_size * sizeof(float)));
-  CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (params.m + 1) * sizeof(int)));
-  CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int)));
+  CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (params.m + 1) * sizeof(int64_t)));
+  CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int64_t)));
   CHECK_CUDA(cudaMalloc((void**)&dC_values, c_true_nnz * sizeof(float)));
 
   CHECK_CUDA(cudaMemcpy(dA, hA, A_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dB, hB, B_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(
-    cudaMemcpy(dC_offsets, hC_offsets, (params.m + 1) * sizeof(int), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(dC_columns, hC_columns, c_true_nnz * sizeof(int), cudaMemcpyHostToDevice));
+    cudaMemcpy(dC_offsets, hC_offsets, (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(dC_columns, hC_columns, c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dC_values, hC_values, c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
   //--------------------------------------------------------------------------
   // CUSPARSE APIs
