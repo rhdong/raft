@@ -55,7 +55,7 @@ template <typename ValueType,
           typename LayoutPolicyA = row_major,
           typename LayoutPolicyB = col_major,
           const int SDDMMorInner = Alg::SDDMM,
-          typename IndexType     = int>
+          typename IndexType     = int64_t>
 struct SDDMMBench : public fixture {
   SDDMMBench(const SDDMMBenchParams<ValueType>& p)
     : params(p),
