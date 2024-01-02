@@ -235,7 +235,7 @@ int test_main(SDDMMBenchParams& params, Timer<double>& timer)
                                dBuffer))
 
   CHECK_CUDA(cudaStreamSynchronize(stream))
-  
+
   timer.start();
   CHECK_CUSPARSE(cusparseSDDMM(handle,
                                CUSPARSE_OPERATION_NON_TRANSPOSE,
