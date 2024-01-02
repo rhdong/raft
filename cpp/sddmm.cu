@@ -265,7 +265,8 @@ int test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f},
+  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.00, 1.0f, 0.0f},
+                                      {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f},
                                       {1024 * 1024, 128, 1024, 0.02, 1.0f, 0.0f},
                                       {1024 * 1024, 128, 1024, 0.1, 1.0f, 0.0f},
                                       {1024 * 1024, 128, 1024, 0.2, 1.0f, 0.0f},
