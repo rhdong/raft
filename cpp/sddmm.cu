@@ -64,12 +64,12 @@ struct SDDMMBenchParams {
   float beta  = 0.0;
 };
 
-template<typename IndexType>
+template <typename IndexType>
 void convert_to_csr(
   bool* matrix, size_t rows, size_t cols, float* values, IndexType* indices, IndexType* indptr)
 {
-  IndexType offset_indptr       = 0;
-  IndexType offset_values       = 0;
+  IndexType offset_indptr = 0;
+  IndexType offset_values = 0;
   indptr[offset_indptr++] = 0;
 
   for (size_t i = 0; i < rows; ++i) {
@@ -125,13 +125,13 @@ void uniform(float* array, int size)
 void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
-  int lda        = params.k;
-  int ldb        = params.k;
-  int A_size     = params.m * params.k;
-  int B_size     = params.k * params.n;
-  int C_size     = params.m * params.n;
-  float* hA      = (float*)malloc(sizeof(float) * A_size);
-  float* hB      = (float*)malloc(sizeof(float) * B_size);
+  int lda    = params.k;
+  int ldb    = params.k;
+  int A_size = params.m * params.k;
+  int B_size = params.k * params.n;
+  int C_size = params.m * params.n;
+  float* hA  = (float*)malloc(sizeof(float) * A_size);
+  float* hB  = (float*)malloc(sizeof(float) * B_size);
 
   uniform(hA, A_size);
   uniform(hB, B_size);
@@ -142,9 +142,9 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
   std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
 
-  int64_t* hC_offsets  = (int64_t*)malloc(sizeof(int64_t) * (params.m + 1));
-  int64_t* hC_columns  = (int64_t*)malloc(sizeof(int64_t) * c_true_nnz);
-  float* hC_values = (float*)malloc(sizeof(float) * c_true_nnz);
+  int64_t* hC_offsets = (int64_t*)malloc(sizeof(int64_t) * (params.m + 1));
+  int64_t* hC_columns = (int64_t*)malloc(sizeof(int64_t) * c_true_nnz);
+  float* hC_values    = (float*)malloc(sizeof(float) * c_true_nnz);
 
   convert_to_csr(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
   //--------------------------------------------------------------------------
@@ -161,7 +161,8 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   CHECK_CUDA(cudaMemcpy(dB, hB, B_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(
     cudaMemcpy(dC_offsets, hC_offsets, (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(dC_columns, hC_columns, c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA(
+    cudaMemcpy(dC_columns, hC_columns, c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dC_values, hC_values, c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
   //--------------------------------------------------------------------------
   // CUSPARSE APIs
@@ -264,8 +265,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}
-                                      };
+  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
 
   auto timer             = Timer<double>();
   int times              = 3;
