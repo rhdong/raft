@@ -124,10 +124,6 @@ void uniform(float* array, int size)
 void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
-  int A_num_rows = params.m;
-  int A_num_cols = params.k;
-  int B_num_rows = params.k;
-  int B_num_cols = params.n;
   int lda        = params.k;
   int ldb        = params.k;
   int A_size     = params.m * params.k;
@@ -141,7 +137,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
   bool* c_dense_data_h = (bool*)malloc(sizeof(bool) * C_size);
 
-  size_t c_true_nnz = create_sparse_matrix(A_num_rows, B_num_cols, params.sparsity, c_dense_data_h);
+  size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
 
   int* hC_offsets  = (int*)malloc(sizeof(int) * (params.m + 1));
   int* hC_columns  = (int*)malloc(sizeof(int) * c_true_nnz);
@@ -154,14 +150,14 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   float *dC_values, *dB, *dA;
   CHECK_CUDA(cudaMalloc((void**)&dA, A_size * sizeof(float)));
   CHECK_CUDA(cudaMalloc((void**)&dB, B_size * sizeof(float)));
-  CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (A_num_rows + 1) * sizeof(int)));
+  CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (params.m + 1) * sizeof(int)));
   CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int)));
   CHECK_CUDA(cudaMalloc((void**)&dC_values, c_true_nnz * sizeof(float)));
 
   CHECK_CUDA(cudaMemcpy(dA, hA, A_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dB, hB, B_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(
-    cudaMemcpy(dC_offsets, hC_offsets, (A_num_rows + 1) * sizeof(int), cudaMemcpyHostToDevice));
+    cudaMemcpy(dC_offsets, hC_offsets, (params.m + 1) * sizeof(int), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dC_columns, hC_columns, c_true_nnz * sizeof(int), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dC_values, hC_values, c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
   //--------------------------------------------------------------------------
@@ -174,14 +170,14 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   CHECK_CUSPARSE(cusparseCreate(&handle))
   // Create dense matrix A
   CHECK_CUSPARSE(
-    cusparseCreateDnMat(&matA, A_num_rows, A_num_cols, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_ROW))
+    cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_ROW))
   // Create dense matrix B
   CHECK_CUSPARSE(
-    cusparseCreateDnMat(&matB, A_num_cols, B_num_cols, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
+    cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
   // Create sparse matrix C in CSR format
   CHECK_CUSPARSE(cusparseCreateCsr(&matC,
-                                   A_num_rows,
-                                   B_num_cols,
+                                   params.m,
+                                   params.n,
                                    c_true_nnz,
                                    dC_offsets,
                                    dC_columns,
