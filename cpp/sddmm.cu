@@ -205,17 +205,17 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
 
   // execute preprocess (optional)
-  CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
-                                          CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                          CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                          &params.alpha,
-                                          matA,
-                                          matB,
-                                          &params.beta,
-                                          matC,
-                                          CUDA_R_32F,
-                                          CUSPARSE_SDDMM_ALG_DEFAULT,
-                                          dBuffer))
+//   CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
+//                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
+//                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
+//                                           &params.alpha,
+//                                           matA,
+//                                           matB,
+//                                           &params.beta,
+//                                           matC,
+//                                           CUDA_R_32F,
+//                                           CUSPARSE_SDDMM_ALG_DEFAULT,
+//                                           dBuffer))
   // execute SpMM
   cudaStream_t stream;
 
