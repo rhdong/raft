@@ -271,7 +271,7 @@ int main(void)
                                       {1024 * 1024, 128, 1024, 0.5, 1.0f, 0.0f}};
 
   auto timer             = Timer<double>();
-  int times              = 10;
+  int times              = 3;
   double accumulated_dur = 0.0;
   for (auto params : cases) {
     test_main(params, timer);
