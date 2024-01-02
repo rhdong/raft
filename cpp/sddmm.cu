@@ -14,7 +14,7 @@
              __LINE__,                                           \
              cudaGetErrorString(status),                         \
              status);                                            \
-      return EXIT_FAILURE;                                       \
+      return;                                                    \
     }                                                            \
   }
 
@@ -26,7 +26,7 @@
              __LINE__,                                               \
              cusparseGetErrorString(status),                         \
              status);                                                \
-      return EXIT_FAILURE;                                           \
+      return;                                                        \
     }                                                                \
   }
 enum class TimeUnit {
@@ -121,7 +121,7 @@ void uniform(float* array, int size)
   }
 }
 
-int test_main(SDDMMBenchParams& params, Timer<double>& timer)
+void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
   int A_num_rows = params.m;
@@ -265,18 +265,23 @@ int test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.00, 1.0f, 0.0f},
+  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.0001, 1.0f, 0.0f},
                                       {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f},
                                       {1024 * 1024, 128, 1024, 0.02, 1.0f, 0.0f},
                                       {1024 * 1024, 128, 1024, 0.1, 1.0f, 0.0f},
                                       {1024 * 1024, 128, 1024, 0.2, 1.0f, 0.0f},
                                       {1024 * 1024, 128, 1024, 0.5, 1.0f, 0.0f}};
 
-  auto timer = Timer<double>();
+  auto timer             = Timer<double>();
+  int times              = 10;
+  double accumulated_dur = 0.0;
   for (auto params : cases) {
     test_main(params, timer);
-    test_main(params, timer);
-    std::cout << timer.getResult() << std::endl;
+    for (int time = 0; time < times; time++) {
+      test_main(params, timer);
+      accumulated_dur += timer.getResult()
+    }
+    std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
   }
   return EXIT_SUCCESS;
 }
