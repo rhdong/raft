@@ -64,22 +64,23 @@ struct SDDMMBenchParams {
   float beta  = 0.0;
 };
 
+template<typename IndexType>
 void convert_to_csr(
-  bool* matrix, size_t rows, size_t cols, float* values, int* indices, int* indptr)
+  bool* matrix, size_t rows, size_t cols, float* values, IndexType* indices, IndexType* indptr)
 {
-  int offset_indptr       = 0;
-  int offset_values       = 0;
+  IndexType offset_indptr       = 0;
+  IndexType offset_values       = 0;
   indptr[offset_indptr++] = 0;
 
   for (size_t i = 0; i < rows; ++i) {
     for (size_t j = 0; j < cols; ++j) {
       if (matrix[i * cols + j]) {
         values[offset_values]  = static_cast<float>(1.0f);
-        indices[offset_values] = static_cast<int>(j);
+        indices[offset_values] = static_cast<IndexType>(j);
         offset_values++;
       }
     }
-    indptr[offset_indptr++] = static_cast<int>(offset_values);
+    indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
   }
 }
 
