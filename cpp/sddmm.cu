@@ -139,6 +139,8 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
   size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
 
+  std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
+
   int* hC_offsets  = (int*)malloc(sizeof(int) * (params.m + 1));
   int* hC_columns  = (int*)malloc(sizeof(int) * c_true_nnz);
   float* hC_values = (float*)malloc(sizeof(float) * c_true_nnz);
