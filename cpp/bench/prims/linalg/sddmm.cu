@@ -55,7 +55,7 @@ template <typename ValueType,
           typename LayoutPolicyA = row_major,
           typename LayoutPolicyB = col_major,
           const int SDDMMorInner = Alg::SDDMM,
-          typename IndexType     = int64_t>
+          typename IndexType     = int>
 struct SDDMMBench : public fixture {
   SDDMMBench(const SDDMMBenchParams<ValueType>& p)
     : params(p),
@@ -187,6 +187,7 @@ struct SDDMMBench : public fixture {
                                     c,
                                     raft::make_host_scalar_view<ValueType>(&params.alpha),
                                     raft::make_host_scalar_view<ValueType>(&params.beta));
+        RAFT_CUDA_TRY(cudaStreamSynchronize(resource::get_cuda_stream(handle)));
       } else {
         raft::distance::pairwise_distance(handle,
                                           a_data_d.data(),
@@ -197,6 +198,7 @@ struct SDDMMBench : public fixture {
                                           static_cast<int>(params.k),
                                           raft::distance::DistanceType::InnerProduct,
                                           std::is_same_v<LayoutPolicyA, row_major>);
+        RAFT_CUDA_TRY(cudaStreamSynchronize(resource::get_cuda_stream(handle)));
       }
     });
 
@@ -227,18 +229,10 @@ static std::vector<SDDMMBenchParams<ValueType>> getInputs()
     float sparsity;
   };
 
-  std::vector<TestSize> data_size{
-    {1024 * 1024, 128, 1024, 0.01},   {1024 * 1024, 128, 1024, 0.1},
-    {1024 * 1024, 128, 1024, 0.101},  {1024 * 1024, 128, 1024, 0.12},
-    {1024 * 1024, 128, 1024, 0.14},   {1024 * 1024, 128, 1024, 0.16},
-    {1024 * 1024, 128, 1024, 0.18},   {1024 * 1024, 128, 1024, 0.2},
-    {1024 * 1024, 128, 1024, 0.249},  {1024 * 1024, 128, 1024, 0.251},
-    {1024 * 1024, 128, 1024, 0.3},    {1024 * 1024, 128, 1024, 0.4},
-    {1024 * 1024, 128, 1024, 0.5},    {1024 * 1024, 1024, 1024, 0.01},
-    {1024 * 1024, 1024, 1024, 0.1},   {1024 * 1024, 1024, 1024, 0.2},
-    {1024 * 1024, 1024, 1024, 0.249}, {1024 * 1024, 1024, 1024, 0.251},
-    {1024 * 1024, 1024, 1024, 0.3},   {1024 * 1024, 1024, 1024, 0.4},
-    {1024 * 1024, 1024, 1024, 0.5}};
+  std::vector<TestSize> data_size{{1024 * 1024, 128, 1024, 0.01},
+                                  {1024 * 1024, 128, 1024, 0.1},
+                                  {1024 * 1024, 128, 1024, 0.2},
+                                  {1024 * 1024, 128, 1024, 0.5}};
 
   param_vec.reserve(data_size.size());
   for (TestSize s : data_size) {
