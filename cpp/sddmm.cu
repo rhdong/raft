@@ -279,7 +279,7 @@ int main(void)
     test_main(params, timer);
     for (int time = 0; time < times; time++) {
       test_main(params, timer);
-      accumulated_dur += timer.getResult()
+      accumulated_dur += timer.getResult();
     }
     std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
   }
