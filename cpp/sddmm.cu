@@ -186,8 +186,8 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
                                    dC_offsets,
                                    dC_columns,
                                    dC_values,
-                                   CUSPARSE_INDEX_32I,
-                                   CUSPARSE_INDEX_32I,
+                                   CUSPARSE_INDEX_64I,
+                                   CUSPARSE_INDEX_64I,
                                    CUSPARSE_INDEX_BASE_ZERO,
                                    CUDA_R_32F))
   // allocate an external buffer if needed
