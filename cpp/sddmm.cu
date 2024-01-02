@@ -125,11 +125,11 @@ void uniform(float* array, int size)
 void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
-  int lda    = params.k;
-  int ldb    = params.k;
-  int A_size = params.m * params.k;
-  int B_size = params.k * params.n;
-  int C_size = params.m * params.n;
+  size_t lda    = params.k;
+  size_t ldb    = params.k;
+  size_t A_size = params.m * params.k;
+  size_t B_size = params.k * params.n;
+  size_t C_size = params.m * params.n;
   float* hA  = (float*)malloc(sizeof(float) * A_size);
   float* hB  = (float*)malloc(sizeof(float) * B_size);
 
