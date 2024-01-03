@@ -63,24 +63,24 @@ struct SDDMMBenchParams {
   float alpha = 1.0;
   float beta  = 0.0;
 };
-
-template <typename IndexType>
-void convert_to_csr(
-  bool* matrix, size_t rows, size_t cols, float* values, IndexType* indices, IndexType* indptr)
+template <typename ValueType, typename IndexType = int64_t>
+void convert_to_csr(std::vector<bool>& matrix,
+                    size_t rows,
+                    size_t cols,
+                    std::vector<ValueType>& values,
+                    std::vector<IndexType>& indices,
+                    std::vector<IndexType>& indptr)
 {
-  IndexType offset_indptr = 0;
-  IndexType offset_values = 0;
-  indptr[offset_indptr++] = 0;
+  indptr.push_back(0);
 
   for (size_t i = 0; i < rows; ++i) {
     for (size_t j = 0; j < cols; ++j) {
       if (matrix[i * cols + j]) {
-        values[offset_values]  = static_cast<float>(1.0f);
-        indices[offset_values] = static_cast<IndexType>(j);
-        offset_values++;
+        values.push_back(static_cast<ValueType>(1.0f));
+        indices.push_back(static_cast<IndexType>(j));
       }
     }
-    indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
+    indptr.push_back(static_cast<IndexType>(values.size()));
   }
 }
 
@@ -146,6 +146,10 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   int64_t* hC_columns = (int64_t*)malloc(sizeof(int64_t) * c_true_nnz);
   float* hC_values    = (float*)malloc(sizeof(float) * c_true_nnz);
 
+  std::vector<float> hC_values(c_true_nnz);
+  std::vector<int64_t> hC_columns(c_true_nnz);
+  std::vector<int64_t> hC_offsets(params.m + 1);
+
   convert_to_csr(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
   //--------------------------------------------------------------------------
   // Device memory management
@@ -160,10 +164,10 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   CHECK_CUDA(cudaMemcpy(dA, hA, A_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dB, hB, B_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(
-    cudaMemcpy(dC_offsets, hC_offsets, (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
+    cudaMemcpy(dC_offsets, hC_offsets.data(), (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
   CHECK_CUDA(
-    cudaMemcpy(dC_columns, hC_columns, c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(dC_values, hC_values, c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
+    cudaMemcpy(dC_columns, hC_columns.data(), c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(dC_values, hC_values.data(), c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
   //--------------------------------------------------------------------------
   // CUSPARSE APIs
   cusparseHandle_t handle = NULL;
