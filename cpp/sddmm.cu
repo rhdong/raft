@@ -112,8 +112,8 @@ size_t create_sparse_matrix(size_t m, size_t n, float sparsity, bool* matrix)
 void uniform(float* array, int size)
 {
   std::random_device rd;
-  std::mt19937 eng(rd());
-  std::uniform_real_distribution<> distr(0.0, 1.0);
+  std::mt19937 eng(rd(123456ULL));
+  std::uniform_real_distribution<> distr(-1.0f, 1.0f);
 
   std::vector<float> randomArray(size);
 
@@ -130,8 +130,8 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   size_t A_size = params.m * params.k;
   size_t B_size = params.k * params.n;
   size_t C_size = params.m * params.n;
-  float* hA  = (float*)malloc(sizeof(float) * A_size);
-  float* hB  = (float*)malloc(sizeof(float) * B_size);
+  float* hA     = (float*)malloc(sizeof(float) * A_size);
+  float* hB     = (float*)malloc(sizeof(float) * B_size);
 
   uniform(hA, A_size);
   uniform(hB, B_size);
@@ -205,17 +205,17 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
 
   // execute preprocess (optional)
-//   CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
-//                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
-//                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
-//                                           &params.alpha,
-//                                           matA,
-//                                           matB,
-//                                           &params.beta,
-//                                           matC,
-//                                           CUDA_R_32F,
-//                                           CUSPARSE_SDDMM_ALG_DEFAULT,
-//                                           dBuffer))
+  //   CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
+  //                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
+  //                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
+  //                                           &params.alpha,
+  //                                           matA,
+  //                                           matB,
+  //                                           &params.beta,
+  //                                           matC,
+  //                                           CUDA_R_32F,
+  //                                           CUSPARSE_SDDMM_ALG_DEFAULT,
+  //                                           dBuffer))
   // execute SpMM
   cudaStream_t stream;
 
