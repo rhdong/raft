@@ -55,7 +55,7 @@ struct Timer {
   std::chrono::time_point<std::chrono::steady_clock> endRecord{};
 };
 
-struct SDDMMBenchParams {
+struct BenchParams {
   size_t m;  // m parameter of the SDDMM
   size_t k;  // k parameter of the SDDMM
   size_t n;  // n parameter of the SDDMM
@@ -125,7 +125,7 @@ void convert_to_csr(std::vector<bool>& matrix,
   }
 }
 
-void test_main(SDDMMBenchParams& params, Timer<double>& timer)
+void test_main(BenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
   size_t lda    = params.k;
@@ -265,18 +265,32 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
+  std::vector<BenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
 
   auto timer             = Timer<double>();
   int times              = 3;
   double accumulated_dur = 0.0;
+  std::cout << "m" << "\t"
+          << "n"  << "\t"
+          << "n"  << "\t"
+          << "sparsity" << "\t"
+          << "alpha" << "\t"
+          << "beta" << "\t"
+          << "duration" << std::endl;
+  std::cout << "-----------------------------" << std::endl;
   for (auto params : cases) {
-    test_main(params, timer);
+    test_main(params, timer); // warmup
     for (int time = 0; time < times; time++) {
       test_main(params, timer);
       accumulated_dur += timer.getResult();
     }
-    std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
+    std::cout << params.m << "\t"
+              << params.k << "\t"
+              << params.n << "\t"
+              << params.sparsity << "\t"
+              << params.alpha << "\t"
+              << params.beta << "\t"
+              << accumulated_dur / static_cast<double>(1.0 * times) << "ms" << std::endl;
   }
 
   //   std::vector<bool> c_dense_data_h{
