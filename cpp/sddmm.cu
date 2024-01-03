@@ -117,11 +117,11 @@ void convert_to_csr(std::vector<bool>& matrix,
     for (size_t j = 0; j < cols; ++j) {
       if (matrix[i * cols + j]) {
         values[offset_values]  = static_cast<float>(1.0f);
-        indices[offset_values] = static_cast<IndexType>(j);
+        indices[offset_values] = static_cast<int64_t>(j);
         offset_values++;
       }
     }
-    indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
+    indptr[offset_indptr++] = static_cast<int64_t>(offset_values);
   }
 }
 
