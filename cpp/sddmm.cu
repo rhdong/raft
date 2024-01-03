@@ -149,8 +149,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   std::vector<int64_t> hC_columns(c_true_nnz);
   std::vector<int64_t> hC_offsets(params.m + 1);
 
-  convert_to_csr(
-    c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
+  convert_to_csr(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
   //--------------------------------------------------------------------------
   // Device memory management
   int64_t *dC_offsets, *dC_columns;
@@ -266,41 +265,41 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-    std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
+  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
 
-    auto timer             = Timer<double>();
-    int times              = 3;
-    double accumulated_dur = 0.0;
-    for (auto params : cases) {
+  auto timer             = Timer<double>();
+  int times              = 3;
+  double accumulated_dur = 0.0;
+  for (auto params : cases) {
+    test_main(params, timer);
+    for (int time = 0; time < times; time++) {
       test_main(params, timer);
-      for (int time = 0; time < times; time++) {
-        test_main(params, timer);
-        accumulated_dur += timer.getResult();
-      }
-      std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
+      accumulated_dur += timer.getResult();
     }
+    std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
+  }
 
-//   std::vector<bool> c_dense_data_h{
-//     true, true, true, false, true, false, true, true, true, true, false, true};
-//
-//   size_t c_true_nnz = 9;
-//
-//   std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
-//
-//   std::vector<float> hC_values(c_true_nnz);
-//   std::vector<int64_t> hC_columns(c_true_nnz);
-//   std::vector<int64_t> hC_offsets(4 + 1);
-//
-//   convert_to_csr(c_dense_data_h, 4, 3, hC_values, hC_columns, hC_offsets);
-//   for (auto a : hC_values)
-//     std::cout << a << ", ";
-//   std::cout << std::endl;
-//   for (auto a : hC_columns)
-//     std::cout << a << ", ";
-//   std::cout << std::endl;
-//   for (auto a : hC_offsets)
-//     std::cout << a << ", ";
-//   std::cout << std::endl;
+  //   std::vector<bool> c_dense_data_h{
+  //     true, true, true, false, true, false, true, true, true, true, false, true};
+  //
+  //   size_t c_true_nnz = 9;
+  //
+  //   std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
+  //
+  //   std::vector<float> hC_values(c_true_nnz);
+  //   std::vector<int64_t> hC_columns(c_true_nnz);
+  //   std::vector<int64_t> hC_offsets(4 + 1);
+  //
+  //   convert_to_csr(c_dense_data_h, 4, 3, hC_values, hC_columns, hC_offsets);
+  //   for (auto a : hC_values)
+  //     std::cout << a << ", ";
+  //   std::cout << std::endl;
+  //   for (auto a : hC_columns)
+  //     std::cout << a << ", ";
+  //   std::cout << std::endl;
+  //   for (auto a : hC_offsets)
+  //     std::cout << a << ", ";
+  //   std::cout << std::endl;
 
   return EXIT_SUCCESS;
 }
