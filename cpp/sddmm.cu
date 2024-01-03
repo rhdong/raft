@@ -190,6 +190,11 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
                                    CUSPARSE_INDEX_64I,
                                    CUSPARSE_INDEX_BASE_ZERO,
                                    CUDA_R_32F))
+  // execute SpMM
+  cudaStream_t stream;
+
+  CHECK_CUDA(cudaStreamCreate(&stream));
+  CHECK_CUSPARSE(cusparseSetStream(handle, stream));
   // allocate an external buffer if needed
   CHECK_CUSPARSE(cusparseSDDMM_bufferSize(handle,
                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
@@ -202,6 +207,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
                                           CUDA_R_32F,
                                           CUSPARSE_SDDMM_ALG_DEFAULT,
                                           &bufferSize))
+  CHECK_CUDA(cudaStreamSynchronize(stream));
   CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
 
   // execute preprocess (optional)
@@ -216,12 +222,6 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   //                                           CUDA_R_32F,
   //                                           CUSPARSE_SDDMM_ALG_DEFAULT,
   //                                           dBuffer))
-  // execute SpMM
-  cudaStream_t stream;
-
-  CHECK_CUDA(cudaDeviceSynchronize())
-  CHECK_CUDA(cudaStreamCreate(&stream));
-  CHECK_CUSPARSE(cusparseSetStream(handle, stream));
 
   timer.start();
   CHECK_CUSPARSE(cusparseSDDMM(handle,
