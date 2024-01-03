@@ -64,27 +64,6 @@ struct SDDMMBenchParams {
   float beta  = 0.0;
 };
 
-template <typename ValueType, typename IndexType = int64_t>
-void convert_to_csr(std::vector<bool>& matrix,
-                    size_t rows,
-                    size_t cols,
-                    std::vector<ValueType>& values,
-                    std::vector<IndexType>& indices,
-                    std::vector<IndexType>& indptr)
-{
-  indptr.push_back(0);
-
-  for (size_t i = 0; i < rows; ++i) {
-    for (size_t j = 0; j < cols; ++j) {
-      if (matrix[i * cols + j]) {
-        values.push_back(static_cast<ValueType>(1.0f));
-        indices.push_back(static_cast<IndexType>(j));
-      }
-    }
-    indptr.push_back(static_cast<IndexType>(values.size()));
-  }
-}
-
 size_t create_sparse_matrix(size_t m, size_t n, float sparsity, std::vector<bool>& matrix)
 {
   size_t total_elements = static_cast<size_t>(m * n);
@@ -123,16 +102,15 @@ void uniform(float* array, int size)
   }
 }
 
-template <typename ValueType, typename IndexType = int64_t>
-void convert_to_csr_problem(std::vector<bool>& matrix,
+void convert_to_csr(std::vector<bool>& matrix,
                     size_t rows,
                     size_t cols,
-                    float* values,
-                    IndexType* indices,
-                    IndexType* indptr)
+                    std::vector<float>& values,
+                    std::vector<int64_t>& indices,
+                    std::vector<int64_t>& indptr)
 {
-  IndexType offset_indptr = 0;
-  IndexType offset_values = 0;
+  int64_t offset_indptr   = 0;
+  int64_t offset_values   = 0;
   indptr[offset_indptr++] = 0;
 
   for (size_t i = 0; i < rows; ++i) {
@@ -288,24 +266,22 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-//   std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
-//
-//   auto timer             = Timer<double>();
-//   int times              = 3;
-//   double accumulated_dur = 0.0;
-//   for (auto params : cases) {
-//     test_main(params, timer);
-//     for (int time = 0; time < times; time++) {
-//       test_main(params, timer);
-//       accumulated_dur += timer.getResult();
-//     }
-//     std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
-//   }
+  //   std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
+  //
+  //   auto timer             = Timer<double>();
+  //   int times              = 3;
+  //   double accumulated_dur = 0.0;
+  //   for (auto params : cases) {
+  //     test_main(params, timer);
+  //     for (int time = 0; time < times; time++) {
+  //       test_main(params, timer);
+  //       accumulated_dur += timer.getResult();
+  //     }
+  //     std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
+  //   }
 
-  std::vector<bool> c_dense_data_h { true, true, true,
-                                     false, true, false,
-                                     true, true, true,
-                                     true, false, true};
+  std::vector<bool> c_dense_data_h{
+    true, true, true, false, true, false, true, true, true, true, false, true};
 
   size_t c_true_nnz = 9;
 
@@ -315,13 +291,15 @@ int main(void)
   std::vector<int64_t> hC_columns(c_true_nnz);
   std::vector<int64_t> hC_offsets(4 + 1);
 
-  convert_to_csr_problem<float, int64_t>(
-    c_dense_data_h, 4, 3, hC_values.data(), hC_columns.data(), hC_offsets.data());
-  for(auto a: hC_values) std::cout << a << ", ";
+  convert_to_csr(c_dense_data_h, 4, 3, hC_values, hC_columns, hC_offsets);
+  for (auto a : hC_values)
+    std::cout << a << ", ";
   std::cout << std::endl;
-  for(auto a: hC_columns) std::cout << a << ", ";
+  for (auto a : hC_columns)
+    std::cout << a << ", ";
   std::cout << std::endl;
-  for(auto a: hC_offsets) std::cout << a << ", ";
+  for (auto a : hC_offsets)
+    std::cout << a << ", ";
   std::cout << std::endl;
 
   return EXIT_SUCCESS;
