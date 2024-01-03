@@ -143,8 +143,6 @@ void test_main(BenchParams& params, Timer<double>& timer)
 
   size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
 
-  std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
-
   std::vector<float> hC_values(c_true_nnz);
   std::vector<int64_t> hC_columns(c_true_nnz);
   std::vector<int64_t> hC_offsets(params.m + 1);
@@ -265,7 +263,22 @@ void test_main(BenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-  std::vector<BenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
+  std::vector<BenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f},
+                                 {1024 * 1024, 128, 1024, 0.1, 1.0f, 0.0f},
+                                 {1024 * 1024, 128, 1024, 0.2, 1.0f, 0.0f},
+                                 {1024 * 1024, 128, 1024, 0.5, 1.0f, 0.0f},
+                                 {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f},
+                                 {1024 * 1024, 1024, 1024, 0.1, 1.0f, 0.0f},
+                                 {1024 * 1024, 1024, 1024, 0.2, 1.0f, 0.0f},
+                                 {1024 * 1024, 1024, 1024, 0.5, 1.0f, 0.0f},
+                                 {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f},
+                                 {1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f},
+                                 {1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f},
+                                 {1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f},
+                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f},
+                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f},
+                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f},
+                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f}};
 
   auto timer             = Timer<double>();
   int times              = 3;
@@ -283,7 +296,7 @@ int main(void)
             << "beta"
             << "\t"
             << "duration" << std::endl;
-  std::cout << "-----------------------------" << std::endl;
+  std::cout << "----------------------------------------------------------" << std::endl;
   for (auto params : cases) {
     test_main(params, timer);  // warmup
     for (int time = 0; time < times; time++) {
