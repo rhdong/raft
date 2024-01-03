@@ -84,7 +84,7 @@ void convert_to_csr(std::vector<bool>& matrix,
   }
 }
 
-size_t create_sparse_matrix(size_t m, size_t n, float sparsity, bool* matrix)
+size_t create_sparse_matrix(size_t m, size_t n, float sparsity, std::vector<bool>& matrix)
 {
   size_t total_elements = static_cast<size_t>(m * n);
   size_t num_ones       = static_cast<size_t>((total_elements * 1.0f) * sparsity);
@@ -136,7 +136,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   uniform(hA, A_size);
   uniform(hB, B_size);
 
-  bool* c_dense_data_h = (bool*)malloc(sizeof(bool) * C_size);
+  std::vector<bool> c_dense_data_h(C_size);
 
   size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
 
@@ -146,7 +146,8 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   std::vector<int64_t> hC_columns(c_true_nnz);
   std::vector<int64_t> hC_offsets(params.m + 1);
 
-  convert_to_csr<float, int64_t>(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
+  convert_to_csr<float, int64_t>(
+    c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
   //--------------------------------------------------------------------------
   // Device memory management
   int64_t *dC_offsets, *dC_columns;
@@ -159,11 +160,12 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
   CHECK_CUDA(cudaMemcpy(dA, hA, A_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dB, hB, B_size * sizeof(float), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(
+    dC_offsets, hC_offsets.data(), (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(
+    dC_columns, hC_columns.data(), c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
   CHECK_CUDA(
-    cudaMemcpy(dC_offsets, hC_offsets.data(), (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA(
-    cudaMemcpy(dC_columns, hC_columns.data(), c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(dC_values, hC_values.data(), c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
+    cudaMemcpy(dC_values, hC_values.data(), c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
   //--------------------------------------------------------------------------
   // CUSPARSE APIs
   cusparseHandle_t handle = NULL;
