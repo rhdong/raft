@@ -149,7 +149,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   std::vector<int64_t> hC_columns(c_true_nnz);
   std::vector<int64_t> hC_offsets(params.m + 1);
 
-  convert_to_csr<float, int64_t>(
+  convert_to_csr(
     c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
   //--------------------------------------------------------------------------
   // Device memory management
