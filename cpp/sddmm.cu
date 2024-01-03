@@ -224,7 +224,9 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   CHECK_CUSPARSE(cusparseSetStream(handle, stream));
 
   timer.start();
-  CHECK_CUSPARSE(cusparseSDDMM(handle,
+
+  for (int time = 0; time < 3; time++) {
+    CHECK_CUSPARSE(cusparseSDDMM(handle,
                                CUSPARSE_OPERATION_NON_TRANSPOSE,
                                CUSPARSE_OPERATION_NON_TRANSPOSE,
                                &params.alpha,
@@ -235,7 +237,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
                                CUDA_R_32F,
                                CUSPARSE_SDDMM_ALG_DEFAULT,
                                dBuffer))
-
+  }
   CHECK_CUDA(cudaStreamSynchronize(stream))
   timer.end();
   CHECK_CUDA(cudaStreamDestroy(stream));
@@ -268,7 +270,7 @@ int main(void)
   std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
 
   auto timer             = Timer<double>();
-  int times              = 3;
+  int times              = 1;
   double accumulated_dur = 0.0;
   for (auto params : cases) {
     test_main(params, timer);
