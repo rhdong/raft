@@ -142,10 +142,6 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
   std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
 
-  int64_t* hC_offsets = (int64_t*)malloc(sizeof(int64_t) * (params.m + 1));
-  int64_t* hC_columns = (int64_t*)malloc(sizeof(int64_t) * c_true_nnz);
-  float* hC_values    = (float*)malloc(sizeof(float) * c_true_nnz);
-
   std::vector<float> hC_values(c_true_nnz);
   std::vector<int64_t> hC_columns(c_true_nnz);
   std::vector<int64_t> hC_offsets(params.m + 1);
@@ -262,9 +258,6 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
   free(hA);
   free(hB);
   free(c_dense_data_h);
-  free(hC_offsets);
-  free(hC_columns);
-  free(hC_values);
 }
 
 int main(void)
