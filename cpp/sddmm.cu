@@ -63,6 +63,7 @@ struct SDDMMBenchParams {
   float alpha = 1.0;
   float beta  = 0.0;
 };
+
 template <typename ValueType, typename IndexType = int64_t>
 void convert_to_csr(std::vector<bool>& matrix,
                     size_t rows,
@@ -119,6 +120,29 @@ void uniform(float* array, int size)
 
   for (int i = 0; i < size; ++i) {
     randomArray[i] = static_cast<float>(distr(eng));
+  }
+}
+
+void convert_to_csr_problem(std::vector<bool>& matrix,
+                    size_t rows,
+                    size_t cols,
+                    float* values,
+                    IndexType* indices,
+                    IndexType* indptr)
+{
+  IndexType offset_indptr = 0;
+  IndexType offset_values = 0;
+  indptr[offset_indptr++] = 0;
+
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      if (matrix[i * cols + j]) {
+        values[offset_values]  = static_cast<float>(1.0f);
+        indices[offset_values] = static_cast<IndexType>(j);
+        offset_values++;
+      }
+    }
+    indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
   }
 }
 
@@ -263,18 +287,41 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-  std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
+//   std::vector<SDDMMBenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f}};
+//
+//   auto timer             = Timer<double>();
+//   int times              = 3;
+//   double accumulated_dur = 0.0;
+//   for (auto params : cases) {
+//     test_main(params, timer);
+//     for (int time = 0; time < times; time++) {
+//       test_main(params, timer);
+//       accumulated_dur += timer.getResult();
+//     }
+//     std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
+//   }
 
-  auto timer             = Timer<double>();
-  int times              = 3;
-  double accumulated_dur = 0.0;
-  for (auto params : cases) {
-    test_main(params, timer);
-    for (int time = 0; time < times; time++) {
-      test_main(params, timer);
-      accumulated_dur += timer.getResult();
-    }
-    std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
-  }
+  std::vector<bool> c_dense_data_h(16) = { true, true, true,
+                                           false, true, false,
+                                           true, true, true,
+                                           true, false, true};
+
+  size_t c_true_nnz = 9;
+
+  std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
+
+  std::vector<float> hC_values(c_true_nnz);
+  std::vector<int64_t> hC_columns(c_true_nnz);
+  std::vector<int64_t> hC_offsets(4 + 1);
+
+  convert_to_csr<float, int64_t>(
+    c_dense_data_h, 4, 4, hC_values, hC_columns, hC_offsets);
+  for(auto a: hC_values) std::cout << a << ", ";
+  std::cout << std::endl;
+  for(auto a: hC_columns) std::cout << a << ", ";
+  std::cout << std::endl;
+  for(auto a: hC_offsets) std::cout << a << ", ";
+  std::cout << std::endl;
+
   return EXIT_SUCCESS;
 }
