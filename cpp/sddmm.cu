@@ -283,18 +283,12 @@ int main(void)
   auto timer             = Timer<double>();
   int times              = 3;
   double accumulated_dur = 0.0;
-  std::cout << "m"
-            << "\t"
-            << "k"
-            << "\t"
-            << "n"
-            << "\t"
-            << "sparsity"
-            << "\t"
-            << "alpha"
-            << "\t"
-            << "beta"
-            << "\t"
+  std::cout << "m\t"
+            << "k\t"
+            << "n\t"
+            << "sparsity\t"
+            << "alpha\t"
+            << "beta\t"
             << "duration" << std::endl;
   std::cout << "----------------------------------------------------------" << std::endl;
   for (auto params : cases) {
@@ -303,7 +297,7 @@ int main(void)
       test_main(params, timer);
       accumulated_dur += timer.getResult();
     }
-    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity << "\t"
+    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity << "\t\t"
               << params.alpha << "\t" << params.beta << "\t"
               << accumulated_dur / static_cast<double>(1.0 * times) << "ms" << std::endl;
   }
