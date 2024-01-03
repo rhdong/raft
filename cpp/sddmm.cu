@@ -208,7 +208,7 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
                                           CUSPARSE_SDDMM_ALG_DEFAULT,
                                           &bufferSize))
   CHECK_CUDA(cudaStreamSynchronize(stream));
-  CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
+  CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize * 4))
 
   // execute preprocess (optional)
   //   CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
