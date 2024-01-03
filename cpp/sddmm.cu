@@ -316,7 +316,7 @@ int main(void)
   std::vector<int64_t> hC_offsets(4 + 1);
 
   convert_to_csr_problem<float, int64_t>(
-    c_dense_data_h, 4, 4, hC_values.data(), hC_columns.data(), hC_offsets.data());
+    c_dense_data_h, 4, 3, hC_values.data(), hC_columns.data(), hC_offsets.data());
   for(auto a: hC_values) std::cout << a << ", ";
   std::cout << std::endl;
   for(auto a: hC_columns) std::cout << a << ", ";
