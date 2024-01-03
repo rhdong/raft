@@ -290,7 +290,7 @@ int main(void)
             << "alpha\t"
             << "beta\t"
             << "duration" << std::endl;
-  std::cout << "----------------------------------------------------------" << std::endl;
+  std::cout << "----------------------------------------------------------------" << std::endl;
   for (auto params : cases) {
     test_main(params, timer);  // warmup
     for (int time = 0; time < times; time++) {
