@@ -36,6 +36,30 @@
 
 namespace raft::bench::linalg {
 
+#define CHECK_CUDA(func)                                         \
+  {                                                              \
+    cudaError_t status = (func);                                 \
+    if (status != cudaSuccess) {                                 \
+      printf("CUDA API failed at line %d with error: %s (%d)\n", \
+             __LINE__,                                           \
+             cudaGetErrorString(status),                         \
+             status);                                            \
+      return;                                                    \
+    }                                                            \
+  }
+
+#define CHECK_CUSPARSE(func)                                         \
+  {                                                                  \
+    cusparseStatus_t status = (func);                                \
+    if (status != CUSPARSE_STATUS_SUCCESS) {                         \
+      printf("CUSPARSE API failed at line %d with error: %s (%d)\n", \
+             __LINE__,                                               \
+             cusparseGetErrorString(status),                         \
+             status);                                                \
+      return;                                                        \
+    }                                                                \
+  }
+
 using row_major = row_major;
 using col_major = col_major;
 
@@ -79,7 +103,7 @@ struct SDDMMBench : public fixture {
     // init C mask
     std::vector<bool> c_dense_data_h(params.m * params.n);
 
-    size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
+    c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
     std::vector<ValueType> values(c_true_nnz);
     std::vector<IndexType> indices(c_true_nnz);
     std::vector<IndexType> indptr(params.m + 1);
@@ -90,7 +114,8 @@ struct SDDMMBench : public fixture {
 
     if (SDDMMorInner == Alg::Inner) { c_dense_data_d.resize(params.m * params.n, stream); }
 
-    convert_to_csr(c_dense_data_h, params.m, params.n, values, indices, indptr);
+    convert_to_csr(
+      c_dense_data_h, params.m, params.n, values.data(), indices.data(), indptr.data());
     RAFT_EXPECTS(c_true_nnz == c_indices_d.size(),
                  "Something wrong. The c_true_nnz != c_indices_d.size()!");
 
@@ -99,26 +124,47 @@ struct SDDMMBench : public fixture {
     update_device(c_indptr_d.data(), indptr.data(), params.m + 1, stream);
   }
 
+  //   void convert_to_csr(std::vector<bool>& matrix,
+  //                       size_t rows,
+  //                       size_t cols,
+  //                       std::vector<ValueType>& values,
+  //                       std::vector<IndexType>& indices,
+  //                       std::vector<IndexType>& indptr)
+  //   {
+  //     indptr.push_back(0);
+  //
+  //     for (size_t i = 0; i < rows; ++i) {
+  //       for (size_t j = 0; j < cols; ++j) {
+  //         if (matrix[i * cols + j]) {
+  //           values.push_back(static_cast<ValueType>(1.0f));
+  //           indices.push_back(static_cast<IndexType>(j));
+  //         }
+  //       }
+  //       indptr.push_back(static_cast<IndexType>(values.size()));
+  //     }
+  //   }
   void convert_to_csr(std::vector<bool>& matrix,
                       size_t rows,
                       size_t cols,
-                      std::vector<ValueType>& values,
-                      std::vector<IndexType>& indices,
-                      std::vector<IndexType>& indptr)
+                      float* values,
+                      IndexType* indices,
+                      IndexType* indptr)
   {
-    indptr.push_back(0);
+    IndexType offset_indptr = 0;
+    IndexType offset_values = 0;
+    indptr[offset_indptr++] = 0;
 
     for (size_t i = 0; i < rows; ++i) {
       for (size_t j = 0; j < cols; ++j) {
         if (matrix[i * cols + j]) {
-          values.push_back(static_cast<ValueType>(1.0f));
-          indices.push_back(static_cast<IndexType>(j));
+          values[offset_values]  = static_cast<float>(1.0f);
+          indices[offset_values] = static_cast<IndexType>(j);
+          offset_values++;
         }
       }
-      indptr.push_back(static_cast<IndexType>(values.size()));
+      indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
     }
   }
-
   size_t create_sparse_matrix(size_t m, size_t n, float sparsity, std::vector<bool>& matrix)
   {
     size_t total_elements = static_cast<size_t>(m * n);
@@ -145,6 +191,84 @@ struct SDDMMBench : public fixture {
   }
 
   ~SDDMMBench() {}
+
+  void test_main()
+  {
+    // Host problem definition
+    size_t lda = params.k;
+    size_t ldb = params.k;
+    // CUSPARSE APIs
+    cusparseHandle_t handle = NULL;
+    cusparseDnMatDescr_t matA, matB;
+    cusparseSpMatDescr_t matC;
+    void* dBuffer     = NULL;
+    size_t bufferSize = 0;
+    CHECK_CUSPARSE(cusparseCreate(&handle))
+    // Create dense matrix A
+    CHECK_CUSPARSE(cusparseCreateDnMat(
+      &matA, params.m, params.k, lda, a_data_d.data(), CUDA_R_32F, CUSPARSE_ORDER_ROW))
+    // Create dense matrix B
+    CHECK_CUSPARSE(cusparseCreateDnMat(
+      &matB, params.k, params.n, ldb, b_data_d.data(), CUDA_R_32F, CUSPARSE_ORDER_COL))
+    // Create sparse matrix C in CSR format
+    CHECK_CUSPARSE(cusparseCreateCsr(&matC,
+                                     params.m,
+                                     params.n,
+                                     c_true_nnz,
+                                     c_indptr_d.data(),
+                                     c_indices_d.data(),
+                                     c_data_d.data(),
+                                     CUSPARSE_INDEX_64I,
+                                     CUSPARSE_INDEX_64I,
+                                     CUSPARSE_INDEX_BASE_ZERO,
+                                     CUDA_R_32F))
+    // execute SpMM
+    cudaStream_t stream;
+
+    CHECK_CUDA(cudaStreamCreate(&stream));
+    CHECK_CUSPARSE(cusparseSetStream(handle, stream));
+    // allocate an external buffer if needed
+    CHECK_CUSPARSE(cusparseSDDMM_bufferSize(handle,
+                                            CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                            CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                            &params.alpha,
+                                            matA,
+                                            matB,
+                                            &params.beta,
+                                            matC,
+                                            CUDA_R_32F,
+                                            CUSPARSE_SDDMM_ALG_DEFAULT,
+                                            &bufferSize))
+    CHECK_CUDA(cudaStreamSynchronize(stream));
+    CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize * 4))
+
+    //     timer.start();
+    CHECK_CUSPARSE(cusparseSDDMM(handle,
+                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                 &params.alpha,
+                                 matA,
+                                 matB,
+                                 &params.beta,
+                                 matC,
+                                 CUDA_R_32F,
+                                 CUSPARSE_SDDMM_ALG_DEFAULT,
+                                 dBuffer))
+
+    CHECK_CUDA(cudaStreamSynchronize(stream))
+    //     timer.end();
+    CHECK_CUDA(cudaStreamDestroy(stream));
+
+    // destroy matrix/vector descriptors
+    CHECK_CUSPARSE(cusparseDestroyDnMat(matA))
+    CHECK_CUSPARSE(cusparseDestroyDnMat(matB))
+    CHECK_CUSPARSE(cusparseDestroySpMat(matC))
+    CHECK_CUSPARSE(cusparseDestroy(handle))
+
+    //--------------------------------------------------------------------------
+    // device memory deallocation
+    CHECK_CUDA(cudaFree(dBuffer))
+  }
 
   void run_benchmark(::benchmark::State& state) override
   {
@@ -188,6 +312,7 @@ struct SDDMMBench : public fixture {
                                     raft::make_host_scalar_view<ValueType>(&params.alpha),
                                     raft::make_host_scalar_view<ValueType>(&params.beta));
         RAFT_CUDA_TRY(cudaStreamSynchronize(resource::get_cuda_stream(handle)));
+        //         test_main();
       } else {
         raft::distance::pairwise_distance(handle,
                                           a_data_d.data(),
@@ -213,6 +338,7 @@ struct SDDMMBench : public fixture {
   rmm::device_uvector<ValueType> b_data_d;
   rmm::device_uvector<ValueType> c_dense_data_d;
 
+  size_t c_true_nnz = 0;
   rmm::device_uvector<IndexType> c_indptr_d;
   rmm::device_uvector<IndexType> c_indices_d;
   rmm::device_uvector<ValueType> c_data_d;
@@ -239,11 +365,13 @@ static std::vector<SDDMMBenchParams<ValueType>> getInputs()
 }
 
 RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, col_major, Alg::SDDMM>), "", getInputs<float>());
-RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, row_major, Alg::SDDMM>), "", getInputs<float>());
-RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, row_major, Alg::SDDMM>), "", getInputs<float>());
-RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, col_major, Alg::SDDMM>), "", getInputs<float>());
-
-RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, col_major, Alg::Inner>), "", getInputs<float>());
-RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, row_major, Alg::Inner>), "", getInputs<float>());
+// RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, row_major, Alg::SDDMM>), "",
+// getInputs<float>()); RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, row_major, Alg::SDDMM>),
+// "", getInputs<float>()); RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, col_major,
+// Alg::SDDMM>), "", getInputs<float>());
+//
+// RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, col_major, Alg::Inner>), "",
+// getInputs<float>()); RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, row_major, Alg::Inner>),
+// "", getInputs<float>());
 
 }  // namespace raft::bench::linalg
