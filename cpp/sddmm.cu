@@ -259,7 +259,6 @@ void test_main(SDDMMBenchParams& params, Timer<double>& timer)
 
   free(hA);
   free(hB);
-  free(c_dense_data_h);
 }
 
 int main(void)
