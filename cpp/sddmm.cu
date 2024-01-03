@@ -123,6 +123,7 @@ void uniform(float* array, int size)
   }
 }
 
+template <typename ValueType, typename IndexType = int64_t>
 void convert_to_csr_problem(std::vector<bool>& matrix,
                     size_t rows,
                     size_t cols,
