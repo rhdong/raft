@@ -112,7 +112,7 @@ size_t create_sparse_matrix(size_t m, size_t n, float sparsity, bool* matrix)
 void uniform(float* array, int size)
 {
   std::random_device rd;
-  std::mt19937 eng(rd(123456ULL));
+  std::mt19937 eng(123456ULL);
   std::uniform_real_distribution<> distr(-1.0f, 1.0f);
 
   std::vector<float> randomArray(size);
