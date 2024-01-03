@@ -302,10 +302,10 @@ int main(void)
 //     std::cout << accumulated_dur / static_cast<double>(1.0 * times) << std::endl;
 //   }
 
-  std::vector<bool> c_dense_data_h(16) = { true, true, true,
-                                           false, true, false,
-                                           true, true, true,
-                                           true, false, true};
+  std::vector<bool> c_dense_data_h { true, true, true,
+                                     false, true, false,
+                                     true, true, true,
+                                     true, false, true};
 
   size_t c_true_nnz = 9;
 
