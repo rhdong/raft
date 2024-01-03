@@ -114,8 +114,7 @@ struct SDDMMBench : public fixture {
 
     if (SDDMMorInner == Alg::Inner) { c_dense_data_d.resize(params.m * params.n, stream); }
 
-    convert_to_csr(
-      c_dense_data_h, params.m, params.n, values.data(), indices.data(), indptr.data());
+    convert_to_csr(c_dense_data_h, params.m, params.n, values, indices, indptr);
     RAFT_EXPECTS(c_true_nnz == c_indices_d.size(),
                  "Something wrong. The c_true_nnz != c_indices_d.size()!");
 
@@ -124,47 +123,47 @@ struct SDDMMBench : public fixture {
     update_device(c_indptr_d.data(), indptr.data(), params.m + 1, stream);
   }
 
-  //   void convert_to_csr(std::vector<bool>& matrix,
-  //                       size_t rows,
-  //                       size_t cols,
-  //                       std::vector<ValueType>& values,
-  //                       std::vector<IndexType>& indices,
-  //                       std::vector<IndexType>& indptr)
-  //   {
-  //     indptr.push_back(0);
-  //
-  //     for (size_t i = 0; i < rows; ++i) {
-  //       for (size_t j = 0; j < cols; ++j) {
-  //         if (matrix[i * cols + j]) {
-  //           values.push_back(static_cast<ValueType>(1.0f));
-  //           indices.push_back(static_cast<IndexType>(j));
-  //         }
-  //       }
-  //       indptr.push_back(static_cast<IndexType>(values.size()));
-  //     }
-  //   }
   void convert_to_csr(std::vector<bool>& matrix,
                       size_t rows,
                       size_t cols,
-                      float* values,
-                      IndexType* indices,
-                      IndexType* indptr)
+                      std::vector<ValueType>& values,
+                      std::vector<IndexType>& indices,
+                      std::vector<IndexType>& indptr)
   {
-    IndexType offset_indptr = 0;
-    IndexType offset_values = 0;
-    indptr[offset_indptr++] = 0;
+    indptr.push_back(0);
 
     for (size_t i = 0; i < rows; ++i) {
       for (size_t j = 0; j < cols; ++j) {
         if (matrix[i * cols + j]) {
-          values[offset_values]  = static_cast<float>(1.0f);
-          indices[offset_values] = static_cast<IndexType>(j);
-          offset_values++;
+          values.push_back(static_cast<ValueType>(1.0f));
+          indices.push_back(static_cast<IndexType>(j));
         }
       }
-      indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
+      indptr.push_back(static_cast<IndexType>(values.size()));
     }
   }
+  //   void convert_to_csr(std::vector<bool>& matrix,
+  //                       size_t rows,
+  //                       size_t cols,
+  //                       float* values,
+  //                       IndexType* indices,
+  //                       IndexType* indptr)
+  //   {
+  //     IndexType offset_indptr = 0;
+  //     IndexType offset_values = 0;
+  //     indptr[offset_indptr++] = 0;
+  //
+  //     for (size_t i = 0; i < rows; ++i) {
+  //       for (size_t j = 0; j < cols; ++j) {
+  //         if (matrix[i * cols + j]) {
+  //           values[offset_values]  = static_cast<float>(1.0f);
+  //           indices[offset_values] = static_cast<IndexType>(j);
+  //           offset_values++;
+  //         }
+  //       }
+  //       indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
+  //     }
+  //   }
   size_t create_sparse_matrix(size_t m, size_t n, float sparsity, std::vector<bool>& matrix)
   {
     size_t total_elements = static_cast<size_t>(m * n);
