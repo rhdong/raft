@@ -139,7 +139,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
   size_t lda    = params.a_is_row ? params.k : params.m;
-  size_t ldb    = params.b_is_row ? params.k : params.n;
+  size_t ldb    = !params.b_is_row ? params.k : params.n;
   size_t A_size = params.m * params.k;
   size_t B_size = params.k * params.n;
   size_t C_size = params.m * params.n;
