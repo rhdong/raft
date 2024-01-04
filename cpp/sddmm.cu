@@ -192,8 +192,9 @@ void test_main(BenchParams& params, Timer<double>& timer)
   }
 
   // Perpare C and test
-  std::vector<float> sparsity_list = {0.01, 0.1, 0, 2, 0.5};
+  std::vector<float> sparsity_list = {0.01, 0.01, 0.1, 0, 2, 0.5};
   size_t pre_buffer_size           = 0;
+  bool warmup = true;
   for (float sp : sparsity_list) {
     std::vector<bool> c_dense_data_h(C_size);
     size_t c_true_nnz = create_sparse_matrix(params.m, params.n, sp, c_dense_data_h);
@@ -243,9 +244,9 @@ void test_main(BenchParams& params, Timer<double>& timer)
     CHECK_CUDA(cudaStreamSynchronize(stream));
     if (buffer_size > pre_buffer_size) {
       CHECK_CUDA(cudaFree(dBuffer))
-      dBuffer = nullptr;
+      dBuffer = NULL;
     }
-    if (dBuffer == nullptr) {
+    if (dBuffer == NULL) {
       CHECK_CUDA(cudaMalloc(&dBuffer, buffer_size))
       pre_buffer_size = buffer_size;
     }
@@ -279,17 +280,20 @@ void test_main(BenchParams& params, Timer<double>& timer)
     CHECK_CUDA(cudaStreamSynchronize(stream))
     timer.end();
 
-    std::cout << size_t(buffer_size / (1024 * 1024)) << "\t";
-    std::cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
-              << params.alpha << "\t" << params.beta << "\t" << (params.a_is_row ? "row" : "col")
-              << "\t" << (params.b_is_row ? "row" : "col") << "\t" << fixed << setprecision(3)
-              << setw(6) << setfill(' ') << static_cast<float>(timer.getResult()) << "ms"
-              << std::endl;
-
     CHECK_CUDA(cudaFree(dBuffer))
     CHECK_CUDA(cudaFree(dC_offsets))
     CHECK_CUDA(cudaFree(dC_columns))
     CHECK_CUDA(cudaFree(dC_values))
+
+    if(!warmup) {
+      std::cout << size_t(buffer_size / (1024 * 1024)) << "\t";
+      std::cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
+                << params.alpha << "\t" << params.beta << "\t" << (params.a_is_row ? "row" : "col")
+                << "\t" << (params.b_is_row ? "row" : "col") << "\t" << fixed << setprecision(3)
+                << setw(6) << setfill(' ') << static_cast<float>(timer.getResult()) << "ms"
+                << std::endl;
+    }
+    warmup = false;
   }
   CHECK_CUDA(cudaStreamDestroy(stream));
 
@@ -330,34 +334,11 @@ int main(void)
     << "----------------------------------------------------------------------------------------"
     << std::endl;
   for (auto params : cases) {
-    test_main(params, timer);  // warmup
     for (int time = 0; time < times; time++) {
       test_main(params, timer);
       accumulated_dur += timer.getResult();
     }
   }
-
-  //   std::vector<bool> c_dense_data_h{
-  //     true, true, true, false, true, false, true, true, true, true, false, true};
-  //
-  //   size_t c_true_nnz = 9;
-  //
-  //   std::cout << "c_true_nnz: " << c_true_nnz << std::endl;
-  //
-  //   std::vector<float> hC_values(c_true_nnz);
-  //   std::vector<int64_t> hC_columns(c_true_nnz);
-  //   std::vector<int64_t> hC_offsets(4 + 1);
-  //
-  //   convert_to_csr(c_dense_data_h, 4, 3, hC_values, hC_columns, hC_offsets);
-  //   for (auto a : hC_values)
-  //     std::cout << a << ", ";
-  //   std::cout << std::endl;
-  //   for (auto a : hC_columns)
-  //     std::cout << a << ", ";
-  //   std::cout << std::endl;
-  //   for (auto a : hC_offsets)
-  //     std::cout << a << ", ";
-  //   std::cout << std::endl;
 
   return EXIT_SUCCESS;
 }
