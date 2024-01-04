@@ -295,8 +295,8 @@ void test_main(BenchParams& params, Timer<double>& timer)
       std::cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
                 << fixed << setprecision(3) << setw(6) << setfill(' ') << params.alpha << "\t"
                 << params.beta << "\t" << (params.a_is_row ? "row" : "col") << "\t"
-                << (params.b_is_row ? "row" : "col") << "\t" << static_cast<float>(accumulated_dur)
-                << "ms" << std::endl;
+                << (params.b_is_row ? "row" : "col") << "\t"
+                << static_cast<float>(accumulated_dur / (times * 1.0f)) << "ms" << std::endl;
     }
     warmup = false;
   }
