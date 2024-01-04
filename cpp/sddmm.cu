@@ -281,8 +281,6 @@ void test_main(BenchParams& params, Timer<double>& timer)
     CHECK_CUDA(cudaStreamSynchronize(stream))
     timer.end();
 
-    std::cout << "dBuffer:" << dBuffer << std::endl;
-    CHECK_CUDA(cudaFree(dBuffer))
     CHECK_CUDA(cudaFree(dC_offsets))
     CHECK_CUDA(cudaFree(dC_columns))
     CHECK_CUDA(cudaFree(dC_values))
@@ -298,6 +296,9 @@ void test_main(BenchParams& params, Timer<double>& timer)
     warmup = false;
   }
   CHECK_CUDA(cudaStreamDestroy(stream));
+  if(dBuffer != NULL) {
+    CHECK_CUDA(cudaFree(dBuffer))
+  }
 
   // destroy matrix/vector descriptors
   CHECK_CUSPARSE(cusparseDestroyDnMat(matA))
