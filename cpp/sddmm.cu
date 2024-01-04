@@ -138,8 +138,8 @@ void convert_to_csr(std::vector<bool>& matrix,
 void test_main(BenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
-  size_t lda    = params.k;
-  size_t ldb    = params.k;
+  size_t lda    = params.a_is_row ? params.k : params.m;
+  size_t ldb    = params.b_is_row ? params.k : params.n;
   size_t A_size = params.m * params.k;
   size_t B_size = params.k * params.n;
   size_t C_size = params.m * params.n;
@@ -180,7 +180,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
       cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_ROW))
   } else {
     CHECK_CUSPARSE(
-      cusparseCreateDnMat(&matA, params.k, params.m, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_COL))
+      cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_COL))
   }
 
   if (!params.b_is_row) {
@@ -188,7 +188,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
       cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
   } else {
     CHECK_CUSPARSE(
-      cusparseCreateDnMat(&matB, params.n, params.k, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_ROW))
+      cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_ROW))
   }
 
   // Perpare C and test
@@ -317,22 +317,19 @@ void test_main(BenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-  //   std::vector<BenchParams> cases{
-  //     {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
-  //     {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
-  //     {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, true, false}};
-
   std::vector<BenchParams> cases{
-//         {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, false, true},
-//         {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, false, true},
-    //     {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, false, true},
-    //     {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, true},
-    //     {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, true},
-//         {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, true, true}
-        {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, false, false},
-        {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, false, false},
-        {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, false, false}
-    };
+//                                  {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
+//                                  {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
+//                                  {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, true, false},
+//                                  {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, false, true},
+//                                  {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, false, true},
+//                                  {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, false, true},
+                                 {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, true},
+                                 {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, true},
+                                 {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, true, true},
+                                 {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, false, false},
+                                 {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, false, false},
+                                 {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, false, false}};
 
   auto timer = Timer<double>();
   std::cout << "-----------------------------------------------------------------------------------"
