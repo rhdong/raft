@@ -135,20 +135,6 @@ void convert_to_csr(std::vector<bool>& matrix,
   }
 }
 
-bool check_hbm(size_t request) {
-  size_t free, total;
-  CUDA_CHECK(cudaSetDevice(0));
-  CUDA_CHECK(cudaMemGetInfo(&free, &total));
-
-  if (free < request) {
-    std::cout << "free HBM is not enough, ignore current benchmark!"
-              << std::endl;
-    return false;
-  }
-  return true;
-  std::cout << "request: " << request << std::endl;
-}
-
 void test_main(BenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
@@ -171,9 +157,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
   // Device memory management
   int64_t *dC_offsets, *dC_columns;
   float *dC_values, *dB, *dA;
-  check_hbm(A_size * sizeof(float));
   CHECK_CUDA(cudaMalloc((void**)&dA, A_size * sizeof(float)));
-  check_hbm(B_size * sizeof(float));
   CHECK_CUDA(cudaMalloc((void**)&dB, B_size * sizeof(float)));
   CHECK_CUDA(cudaMemcpy(dA, hA.data(), A_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dB, hB.data(), B_size * sizeof(float), cudaMemcpyHostToDevice));
@@ -222,12 +206,8 @@ void test_main(BenchParams& params, Timer<double>& timer)
     std::vector<int64_t> hC_offsets(params.m + 1);
 
     convert_to_csr(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
-
-    check_hbm((params.m + 1) * sizeof(int64_t));
     CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (params.m + 1) * sizeof(int64_t)));
-    check_hbm(c_true_nnz * sizeof(int64_t));
     CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int64_t)));
-    check_hbm(c_true_nnz * sizeof(float));
     CHECK_CUDA(cudaMalloc((void**)&dC_values, c_true_nnz * sizeof(float)));
 
     CHECK_CUDA(cudaMemcpy(
@@ -269,7 +249,6 @@ void test_main(BenchParams& params, Timer<double>& timer)
       dBuffer = NULL;
     }
     if (dBuffer == NULL) {
-      check_hbm(buffer_size);
       CHECK_CUDA(cudaMalloc(&dBuffer, buffer_size))
       pre_buffer_size = buffer_size;
     }
@@ -312,11 +291,12 @@ void test_main(BenchParams& params, Timer<double>& timer)
     CHECK_CUDA(cudaFree(dC_values))
 
     if (!warmup) {
-      cout << size_t(buffer_size / (1024 * 1024)) << "\t";
-      cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t" << fixed
-           << setprecision(3) << setw(6) << setfill(' ') << params.alpha << "\t" << params.beta
-           << "\t" << (params.a_is_row ? "row" : "col") << "\t" << (params.b_is_row ? "row" : "col")
-           << "\t" << static_cast<float>(accumulated_dur / (times * 1.0f)) << "ms" << endl;
+      std::cout << size_t(buffer_size / (1024 * 1024)) << "\t";
+      std::cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
+                << fixed << setprecision(3) << setw(6) << setfill(' ') << params.alpha << "\t"
+                << params.beta << "\t" << (params.a_is_row ? "row" : "col") << "\t"
+                << (params.b_is_row ? "row" : "col") << "\t"
+                << static_cast<float>(accumulated_dur / (times * 1.0f)) << "ms" << std::endl;
     }
     warmup = false;
   }
@@ -338,28 +318,28 @@ void test_main(BenchParams& params, Timer<double>& timer)
 int main(void)
 {
   std::vector<BenchParams> cases{
-//     {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
-//     {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
     {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
-    {10 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false}};
+    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false}};
 
   auto timer = Timer<double>();
-  cout << "-----------------------------------------------------------------------------------"
-          "-------------"
-       << endl;
-  cout << "buffer\t"
-       << "m\t\t"
-       << "k\t"
-       << "n\t"
-       << "sparsity\t"
-       << "alpha\t"
-       << "beta\t"
-       << "orderA\t"
-       << "orderB\t"
-       << "duration" << endl;
-  cout << "-----------------------------------------------------------------------------------"
-          "-------------"
-       << endl;
+  std::cout << "-----------------------------------------------------------------------------------"
+               "-------------"
+            << std::endl;
+  std::cout << "buffer\t"
+            << "m\t\t"
+            << "k\t"
+            << "n\t"
+            << "sparsity\t"
+            << "alpha\t"
+            << "beta\t"
+            << "orderA\t"
+            << "orderB\t"
+            << "duration" << std::endl;
+  std::cout << "-----------------------------------------------------------------------------------"
+               "-------------"
+            << std::endl;
   for (auto params : cases) {
     test_main(params, timer);
   }
