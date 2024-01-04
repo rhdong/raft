@@ -318,10 +318,10 @@ void test_main(BenchParams& params, Timer<double>& timer)
 int main(void)
 {
   std::vector<BenchParams> cases{
-    {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
-    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false}};
+//     {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
+//     {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 4 * 1024, 2 * 1024, 0.01, 1.0f, 0.0f, true, false}};
 
   auto timer = Timer<double>();
   std::cout << "-----------------------------------------------------------------------------------"
