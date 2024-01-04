@@ -193,9 +193,10 @@ void test_main(BenchParams& params, Timer<double>& timer)
 
   // Perpare C and test
   // The first sparsity is only for warmup.
-  std::vector<float> sparsity_list = {0.001, 0.01, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.5, 0.8};
+  std::vector<float> sparsity_list = {0.001, 0.01, 0.1, 0.2, 0.5, 0.8};
   size_t pre_buffer_size           = 0;
   bool warmup                      = true;
+  int times                        = 3;
   for (float sp : sparsity_list) {
     std::vector<bool> c_dense_data_h(C_size);
     size_t c_true_nnz = create_sparse_matrix(params.m, params.n, sp, c_dense_data_h);
@@ -265,21 +266,25 @@ void test_main(BenchParams& params, Timer<double>& timer)
                                             CUSPARSE_SDDMM_ALG_DEFAULT,
                                             dBuffer))
 
-    timer.start();
-    CHECK_CUSPARSE(cusparseSDDMM(handle,
-                                 opA,
-                                 opB,
-                                 &params.alpha,
-                                 matA,
-                                 matB,
-                                 &params.beta,
-                                 matC,
-                                 CUDA_R_32F,
-                                 CUSPARSE_SDDMM_ALG_DEFAULT,
-                                 dBuffer))
+    double accumulated_dur = 0.0;
+    for (int time = 0; time < times; time++) {
+      timer.start();
+      CHECK_CUSPARSE(cusparseSDDMM(handle,
+                                   opA,
+                                   opB,
+                                   &params.alpha,
+                                   matA,
+                                   matB,
+                                   &params.beta,
+                                   matC,
+                                   CUDA_R_32F,
+                                   CUSPARSE_SDDMM_ALG_DEFAULT,
+                                   dBuffer))
 
-    CHECK_CUDA(cudaStreamSynchronize(stream))
-    timer.end();
+      CHECK_CUDA(cudaStreamSynchronize(stream))
+      timer.end();
+      accumulated_dur += timer.getResult();
+    }
 
     CHECK_CUDA(cudaFree(dC_offsets))
     CHECK_CUDA(cudaFree(dC_columns))
@@ -290,8 +295,8 @@ void test_main(BenchParams& params, Timer<double>& timer)
       std::cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
                 << fixed << setprecision(3) << setw(6) << setfill(' ') << params.alpha << "\t"
                 << params.beta << "\t" << (params.a_is_row ? "row" : "col") << "\t"
-                << (params.b_is_row ? "row" : "col") << "\t"
-                << static_cast<float>(timer.getResult()) << "ms" << std::endl;
+                << (params.b_is_row ? "row" : "col") << "\t" << static_cast<float>(accumulated_dur)
+                << "ms" << std::endl;
     }
     warmup = false;
   }
@@ -318,12 +323,10 @@ int main(void)
     {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
     {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false}};
 
-  auto timer             = Timer<double>();
-  int times              = 2;
-  double accumulated_dur = 0.0;
-  std::cout
-    << "------------------------------------------------------------------------------------------------"
-    << std::endl;
+  auto timer = Timer<double>();
+  std::cout << "-----------------------------------------------------------------------------------"
+               "-------------"
+            << std::endl;
   std::cout << "buffer\t"
             << "m\t\t"
             << "k\t"
@@ -334,14 +337,11 @@ int main(void)
             << "orderA\t"
             << "orderB\t"
             << "duration" << std::endl;
-  std::cout
-    << "------------------------------------------------------------------------------------------------"
-    << std::endl;
+  std::cout << "-----------------------------------------------------------------------------------"
+               "-------------"
+            << std::endl;
   for (auto params : cases) {
-    for (int time = 0; time < times; time++) {
-      test_main(params, timer);
-      accumulated_dur += timer.getResult();
-    }
+    test_main(params, timer);
   }
 
   return EXIT_SUCCESS;
