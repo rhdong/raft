@@ -135,7 +135,7 @@ void convert_to_csr(std::vector<bool>& matrix,
   }
 }
 
-void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
+void test_main(BenchParams& params, Timer<double>& timer)
 {
   // Host problem definition
   size_t lda    = params.k;
@@ -193,9 +193,10 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
 
   // Perpare C and test
   std::vector<float> sparsity_list = {0.01, 0.1, 0, 2, 0.5};
+  size_t pre_buffer_size           = 0;
   for (float sp : sparsity_list) {
     std::vector<bool> c_dense_data_h(C_size);
-    size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
+    size_t c_true_nnz = create_sparse_matrix(params.m, params.n, sp, c_dense_data_h);
 
     std::vector<float> hC_values(c_true_nnz);
     std::vector<int64_t> hC_columns(c_true_nnz);
@@ -227,6 +228,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
                                      CUSPARSE_INDEX_BASE_ZERO,
                                      CUDA_R_32F))
     // allocate an external buffer if needed
+    size_t buffer_size = 0;
     CHECK_CUSPARSE(cusparseSDDMM_bufferSize(handle,
                                             opA,
                                             opB,
@@ -237,9 +239,16 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
                                             matC,
                                             CUDA_R_32F,
                                             CUSPARSE_SDDMM_ALG_DEFAULT,
-                                            &bufferSize))
+                                            &buffer_size))
     CHECK_CUDA(cudaStreamSynchronize(stream));
-    CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
+    if (buffer_size > pre_buffer_size) {
+      CHECK_CUDA(cudaFree(&dBuffer, buffer_size))
+      dBuffer = nullptr;
+    }
+    if (dBuffer == nullptr) {
+      CHECK_CUDA(cudaMalloc(&dBuffer, buffer_size))
+      pre_buffer_size = buffer_size;
+    }
 
     // execute preprocess (optional)
     CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
@@ -270,8 +279,8 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
     CHECK_CUDA(cudaStreamSynchronize(stream))
     timer.end();
 
-    std::cout << size_t(bufferSize / (1024 * 1024)) << "\t";
-    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
+    std::cout << size_t(buffer_size / (1024 * 1024)) << "\t";
+    std::cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
               << params.alpha << "\t" << params.beta << "\t" << (params.a_is_row ? "row" : "col")
               << "\t" << (params.b_is_row ? "row" : "col") << "\t" << fixed << setprecision(3)
               << setw(6) << setfill(' ') << static_cast<float>(timer.getResult()) << "ms"
@@ -306,7 +315,6 @@ int main(void)
 
   auto timer             = Timer<double>();
   int times              = 2;
-  size_t bufferSize      = 0;
   double accumulated_dur = 0.0;
   std::cout << "buffer\t"
             << "m\t"
@@ -322,10 +330,9 @@ int main(void)
     << "----------------------------------------------------------------------------------------"
     << std::endl;
   for (auto params : cases) {
-    bufferSize = 0;
-    test_main(params, timer, bufferSize);  // warmup
+    test_main(params, timer);  // warmup
     for (int time = 0; time < times; time++) {
-      test_main(params, timer, bufferSize);
+      test_main(params, timer);
       accumulated_dur += timer.getResult();
     }
   }
