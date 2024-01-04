@@ -193,7 +193,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
 
   // Perpare C and test
   // The first sparsity is only for warmup.
-  std::vector<float> sparsity_list = {0.001, 0.01, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.5};
+  std::vector<float> sparsity_list = {0.001, 0.01, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.5, 0.8};
   size_t pre_buffer_size           = 0;
   bool warmup                      = true;
   for (float sp : sparsity_list) {
@@ -322,7 +322,7 @@ int main(void)
   int times              = 2;
   double accumulated_dur = 0.0;
   std::cout
-    << "----------------------------------------------------------------------------------------"
+    << "------------------------------------------------------------------------------------------------"
     << std::endl;
   std::cout << "buffer\t"
             << "m\t\t"
@@ -335,7 +335,7 @@ int main(void)
             << "orderB\t"
             << "duration" << std::endl;
   std::cout
-    << "----------------------------------------------------------------------------------------"
+    << "------------------------------------------------------------------------------------------------"
     << std::endl;
   for (auto params : cases) {
     for (int time = 0; time < times; time++) {
