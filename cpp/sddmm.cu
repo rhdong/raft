@@ -193,7 +193,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
 
   // Perpare C and test
   // The first sparsity is only for warmup.
-  std::vector<float> sparsity_list = {0.001, 0.01, 0.1, 0.2, 0.5};
+  std::vector<float> sparsity_list = {0.001, 0.01, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.5};
   size_t pre_buffer_size           = 0;
   bool warmup                      = true;
   for (float sp : sparsity_list) {
@@ -288,10 +288,10 @@ void test_main(BenchParams& params, Timer<double>& timer)
     if (!warmup) {
       std::cout << size_t(buffer_size / (1024 * 1024)) << "\t";
       std::cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
-                << params.alpha << "\t" << params.beta << "\t" << (params.a_is_row ? "row" : "col")
-                << "\t" << (params.b_is_row ? "row" : "col") << "\t" << fixed << setprecision(3)
-                << setw(6) << setfill(' ') << static_cast<float>(timer.getResult()) << "ms"
-                << std::endl;
+                << fixed << setprecision(3) << setw(6) << setfill(' ') << params.alpha << "\t"
+                << params.beta << "\t" << (params.a_is_row ? "row" : "col") << "\t"
+                << (params.b_is_row ? "row" : "col") << "\t"
+                << static_cast<float>(timer.getResult()) << "ms" << std::endl;
     }
     warmup = false;
   }
@@ -325,7 +325,7 @@ int main(void)
     << "----------------------------------------------------------------------------------------"
     << std::endl;
   std::cout << "buffer\t"
-            << "m\t"
+            << "m\t\t"
             << "k\t"
             << "n\t"
             << "sparsity\t"
