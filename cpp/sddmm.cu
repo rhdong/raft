@@ -234,7 +234,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
                                           CUSPARSE_SDDMM_ALG_DEFAULT,
                                           &bufferSize))
   CHECK_CUDA(cudaStreamSynchronize(stream));
-  std::cout << bufferSize << "\t";
+  std::cout << size_t(bufferSize / (1024 * 1024)) << "MB\t";
   CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
 
   // execute preprocess (optional)
