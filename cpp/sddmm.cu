@@ -153,40 +153,27 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
   uniform(hA.data(), A_size);
   uniform(hB.data(), B_size);
 
-  std::vector<bool> c_dense_data_h(C_size);
-
-  size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
-
-  std::vector<float> hC_values(c_true_nnz);
-  std::vector<int64_t> hC_columns(c_true_nnz);
-  std::vector<int64_t> hC_offsets(params.m + 1);
-
-  convert_to_csr(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
   //--------------------------------------------------------------------------
   // Device memory management
   int64_t *dC_offsets, *dC_columns;
   float *dC_values, *dB, *dA;
   CHECK_CUDA(cudaMalloc((void**)&dA, A_size * sizeof(float)));
   CHECK_CUDA(cudaMalloc((void**)&dB, B_size * sizeof(float)));
-  CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (params.m + 1) * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int64_t)));
-  CHECK_CUDA(cudaMalloc((void**)&dC_values, c_true_nnz * sizeof(float)));
-
   CHECK_CUDA(cudaMemcpy(dA, hA.data(), A_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(dB, hB.data(), B_size * sizeof(float), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(
-    dC_offsets, hC_offsets.data(), (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(
-    dC_columns, hC_columns.data(), c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA(
-    cudaMemcpy(dC_values, hC_values.data(), c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
-  //--------------------------------------------------------------------------
-  // CUSPARSE APIs
+
+  // Prepare A and B
   cusparseHandle_t handle = NULL;
+
   cusparseDnMatDescr_t matA, matB;
   cusparseSpMatDescr_t matC;
   void* dBuffer = NULL;
   CHECK_CUSPARSE(cusparseCreate(&handle))
+  cudaStream_t stream;
+
+  CHECK_CUDA(cudaStreamCreate(&stream));
+  CHECK_CUSPARSE(cusparseSetStream(handle, stream));
+
   // Create dense matrix A
   if (params.a_is_row) {
     CHECK_CUSPARSE(
@@ -196,7 +183,6 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
       cusparseCreateDnMat(&matA, params.k, params.m, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_COL))
   }
 
-  // Create dense matrix B
   if (!params.b_is_row) {
     CHECK_CUSPARSE(
       cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
@@ -204,66 +190,97 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
     CHECK_CUSPARSE(
       cusparseCreateDnMat(&matB, params.n, params.k, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_ROW))
   }
-  // Create sparse matrix C in CSR format
-  CHECK_CUSPARSE(cusparseCreateCsr(&matC,
-                                   params.m,
-                                   params.n,
-                                   c_true_nnz,
-                                   dC_offsets,
-                                   dC_columns,
-                                   dC_values,
-                                   CUSPARSE_INDEX_64I,
-                                   CUSPARSE_INDEX_64I,
-                                   CUSPARSE_INDEX_BASE_ZERO,
-                                   CUDA_R_32F))
-  // execute SpMM
-  cudaStream_t stream;
 
-  CHECK_CUDA(cudaStreamCreate(&stream));
-  CHECK_CUSPARSE(cusparseSetStream(handle, stream));
-  // allocate an external buffer if needed
-  CHECK_CUSPARSE(cusparseSDDMM_bufferSize(handle,
-                                          opA,
-                                          opB,
-                                          &params.alpha,
-                                          matA,
-                                          matB,
-                                          &params.beta,
-                                          matC,
-                                          CUDA_R_32F,
-                                          CUSPARSE_SDDMM_ALG_DEFAULT,
-                                          &bufferSize))
-  CHECK_CUDA(cudaStreamSynchronize(stream));
-  CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
+  // Perpare C and test
+  for (float sp : {0.01, 0.1, 0, 2, 0.5}) {
+    std::vector<bool> c_dense_data_h(C_size);
+    size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
 
-  // execute preprocess (optional)
-  CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
-                                          opA,
-                                          opB,
-                                          &params.alpha,
-                                          matA,
-                                          matB,
-                                          &params.beta,
-                                          matC,
-                                          CUDA_R_32F,
-                                          CUSPARSE_SDDMM_ALG_DEFAULT,
-                                          dBuffer))
+    std::vector<float> hC_values(c_true_nnz);
+    std::vector<int64_t> hC_columns(c_true_nnz);
+    std::vector<int64_t> hC_offsets(params.m + 1);
 
-  timer.start();
-  CHECK_CUSPARSE(cusparseSDDMM(handle,
-                               opA,
-                               opB,
-                               &params.alpha,
-                               matA,
-                               matB,
-                               &params.beta,
-                               matC,
-                               CUDA_R_32F,
-                               CUSPARSE_SDDMM_ALG_DEFAULT,
-                               dBuffer))
+    convert_to_csr(c_dense_data_h, params.m, params.n, hC_values, hC_columns, hC_offsets);
+    CHECK_CUDA(cudaMalloc((void**)&dC_offsets, (params.m + 1) * sizeof(int64_t)));
+    CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int64_t)));
+    CHECK_CUDA(cudaMalloc((void**)&dC_values, c_true_nnz * sizeof(float)));
 
-  CHECK_CUDA(cudaStreamSynchronize(stream))
-  timer.end();
+    CHECK_CUDA(cudaMemcpy(
+      dC_offsets, hC_offsets.data(), (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(
+      dC_columns, hC_columns.data(), c_true_nnz * sizeof(int64_t), cudaMemcpyHostToDevice));
+    CHECK_CUDA(
+      cudaMemcpy(dC_values, hC_values.data(), c_true_nnz * sizeof(float), cudaMemcpyHostToDevice));
+    //--------------------------------------------------------------------------
+    // CUSPARSE APIs
+    // Create sparse matrix C in CSR format
+    CHECK_CUSPARSE(cusparseCreateCsr(&matC,
+                                     params.m,
+                                     params.n,
+                                     c_true_nnz,
+                                     dC_offsets,
+                                     dC_columns,
+                                     dC_values,
+                                     CUSPARSE_INDEX_64I,
+                                     CUSPARSE_INDEX_64I,
+                                     CUSPARSE_INDEX_BASE_ZERO,
+                                     CUDA_R_32F))
+    // allocate an external buffer if needed
+    CHECK_CUSPARSE(cusparseSDDMM_bufferSize(handle,
+                                            opA,
+                                            opB,
+                                            &params.alpha,
+                                            matA,
+                                            matB,
+                                            &params.beta,
+                                            matC,
+                                            CUDA_R_32F,
+                                            CUSPARSE_SDDMM_ALG_DEFAULT,
+                                            &bufferSize))
+    CHECK_CUDA(cudaStreamSynchronize(stream));
+    CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
+
+    // execute preprocess (optional)
+    CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
+                                            opA,
+                                            opB,
+                                            &params.alpha,
+                                            matA,
+                                            matB,
+                                            &params.beta,
+                                            matC,
+                                            CUDA_R_32F,
+                                            CUSPARSE_SDDMM_ALG_DEFAULT,
+                                            dBuffer))
+
+    timer.start();
+    CHECK_CUSPARSE(cusparseSDDMM(handle,
+                                 opA,
+                                 opB,
+                                 &params.alpha,
+                                 matA,
+                                 matB,
+                                 &params.beta,
+                                 matC,
+                                 CUDA_R_32F,
+                                 CUSPARSE_SDDMM_ALG_DEFAULT,
+                                 dBuffer))
+
+    CHECK_CUDA(cudaStreamSynchronize(stream))
+    timer.end();
+
+    std::cout << size_t(bufferSize / (1024 * 1024)) << "MB\t";
+    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity
+              << "\t\t" << params.alpha << "\t" << params.beta << "\t"
+              << (params.a_is_row ? "row" : "col") << "\t" << (params.b_is_row ? "row" : "col")
+              << "\t" << fixed << setprecision(3) << setw(6) << setfill(' ')
+              << static_cast<float>(timer.getResult()) << "ms" << std::endl;
+
+    CHECK_CUDA(cudaFree(dBuffer))
+    CHECK_CUDA(cudaFree(dC_offsets))
+    CHECK_CUDA(cudaFree(dC_columns))
+    CHECK_CUDA(cudaFree(dC_values))
+  }
   CHECK_CUDA(cudaStreamDestroy(stream));
 
   // destroy matrix/vector descriptors
@@ -274,33 +291,17 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
 
   //--------------------------------------------------------------------------
   // device memory deallocation
-  CHECK_CUDA(cudaFree(dBuffer))
   CHECK_CUDA(cudaFree(dA))
   CHECK_CUDA(cudaFree(dB))
-  CHECK_CUDA(cudaFree(dC_offsets))
-  CHECK_CUDA(cudaFree(dC_columns))
-  CHECK_CUDA(cudaFree(dC_values))
 }
 
 int main(void)
 {
   std::vector<BenchParams> cases{
     {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 128, 1024, 0.1, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 128, 1024, 0.2, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 128, 1024, 0.5, 1.0f, 0.0f, true, false},
     {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 1024, 1024, 0.1, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 1024, 1024, 0.2, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 1024, 1024, 0.5, 1.0f, 0.0f, true, false},
     {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f, true, false},
-    {1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false},
-    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
-    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f, true, false},
-    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f, true, false},
-    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false}};
+    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false}};
 
   auto timer             = Timer<double>();
   int times              = 2;
@@ -316,8 +317,9 @@ int main(void)
             << "orderA\t"
             << "orderB\t"
             << "duration" << std::endl;
-  std::cout << "------------------------------------------------------------------------------------------------"
-            << std::endl;
+  std::cout
+    << "----------------------------------------------------------------------------------------"
+    << std::endl;
   for (auto params : cases) {
     bufferSize = 0;
     test_main(params, timer, bufferSize);  // warmup
@@ -325,13 +327,6 @@ int main(void)
       test_main(params, timer, bufferSize);
       accumulated_dur += timer.getResult();
     }
-    std::cout << size_t(bufferSize / (1024 * 1024)) << "MB\t";
-    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity
-              << "\t\t" << params.alpha << "\t" << params.beta << "\t"
-              << (params.a_is_row ? "row" : "col") << "\t" << (params.b_is_row ? "row" : "col")
-              << "\t" << fixed << setprecision(3) << setw(6) << setfill(' ')
-              << static_cast<float>(accumulated_dur / static_cast<double>(1.0 * times)) << "ms"
-              << std::endl;
   }
 
   //   std::vector<bool> c_dense_data_h{
