@@ -193,7 +193,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
 
   // Perpare C and test
   // The first sparsity is only for warmup.
-  std::vector<float> sparsity_list = {0.001, 0.01, 0.1, 0.19, 0.2, 0.5};
+  std::vector<float> sparsity_list = {0.001, 0.5};
   size_t pre_buffer_size           = 0;
   bool warmup                      = true;
   int times                        = 3;
@@ -326,12 +326,12 @@ int main(void)
   std::vector<BenchParams> cases{
 //     {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, false, true},
 //     {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, false, true},
-    {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, false, true},
+//     {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, false, true},
     {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, true},
     {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, true},
-    {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, true, true},
-    {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, false, false},
-    {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, false, false},
+//     {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, true, true},
+//     {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, false, false},
+//     {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, false, false},
     {1024 * 1024, 1024, 2 * 1024, 0.01, 1.0f, 0.0f, false, false}};
 
   auto timer = Timer<double>();
