@@ -295,6 +295,7 @@ int main(void)
 
   auto timer             = Timer<double>();
   int times              = 3;
+  size_t bufferSize = 0;
   double accumulated_dur = 0.0;
   std::cout << "m\t"
             << "k\t"
@@ -302,16 +303,21 @@ int main(void)
             << "sparsity\t"
             << "alpha\t"
             << "beta\t"
+            << "orderA\t"
+            << "orderB\t"
             << "duration" << std::endl;
-  std::cout << "----------------------------------------------------------------" << std::endl;
+  std::cout << "-------------------------------------------------------------------------------" << std::endl;
   for (auto params : cases) {
-    test_main(params, timer);  // warmup
+    bufferSize = 0;
+    test_main(params, timer, bufferSize);  // warmup
     for (int time = 0; time < times; time++) {
-      test_main(params, timer);
+      test_main(params, timer, bufferSize);
       accumulated_dur += timer.getResult();
     }
     std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity
               << "\t\t" << params.alpha << "\t" << params.beta << "\t"
+              << (params.a_is_row ? "row" : "col") << "\t"
+              << (params.b_is_row ? "row" : "col") << "\t"
               << accumulated_dur / static_cast<double>(1.0 * times) << "ms" << std::endl;
   }
 
