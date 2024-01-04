@@ -321,6 +321,9 @@ int main(void)
   auto timer             = Timer<double>();
   int times              = 2;
   double accumulated_dur = 0.0;
+  std::cout
+    << "----------------------------------------------------------------------------------------"
+    << std::endl;
   std::cout << "buffer\t"
             << "m\t"
             << "k\t"
