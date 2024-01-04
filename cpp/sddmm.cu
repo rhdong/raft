@@ -192,7 +192,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
   }
 
   // Perpare C and test
-  std:: : vector<float> sparsity_list = {0.01, 0.1, 0, 2, 0.5};
+  std::vector<float> sparsity_list = {0.01, 0.1, 0, 2, 0.5};
   for (float sp : sparsity_list) {
     std::vector<bool> c_dense_data_h(C_size);
     size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
@@ -271,7 +271,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
     timer.end();
 
     std::cout << size_t(bufferSize / (1024 * 1024)) << "MB\t";
-    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity
+    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << sp
               << "\t\t" << params.alpha << "\t" << params.beta << "\t"
               << (params.a_is_row ? "row" : "col") << "\t" << (params.b_is_row ? "row" : "col")
               << "\t" << fixed << setprecision(3) << setw(6) << setfill(' ')
