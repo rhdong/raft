@@ -270,7 +270,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
     CHECK_CUDA(cudaStreamSynchronize(stream))
     timer.end();
 
-    std::cout << size_t(bufferSize / (1024 * 1024)) << "MB\t";
+    std::cout << size_t(bufferSize / (1024 * 1024)) << "\t";
     std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
               << params.alpha << "\t" << params.beta << "\t" << (params.a_is_row ? "row" : "col")
               << "\t" << (params.b_is_row ? "row" : "col") << "\t" << fixed << setprecision(3)
