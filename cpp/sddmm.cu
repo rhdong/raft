@@ -62,6 +62,8 @@ struct BenchParams {
   float sparsity;
   float alpha = 1.0;
   float beta  = 0.0;
+  bool a_is_row;
+  bool b_is_row;
 };
 
 size_t create_sparse_matrix(size_t m, size_t n, float sparsity, std::vector<bool>& matrix)
@@ -125,7 +127,7 @@ void convert_to_csr(std::vector<bool>& matrix,
   }
 }
 
-void test_main(BenchParams& params, Timer<double>& timer)
+void test_main(BenchParams& params, Timer<double>& timer, size_t &bufferSize)
 {
   // Host problem definition
   size_t lda    = params.k;
@@ -133,11 +135,15 @@ void test_main(BenchParams& params, Timer<double>& timer)
   size_t A_size = params.m * params.k;
   size_t B_size = params.k * params.n;
   size_t C_size = params.m * params.n;
-  float* hA     = (float*)malloc(sizeof(float) * A_size);
-  float* hB     = (float*)malloc(sizeof(float) * B_size);
 
-  uniform(hA, A_size);
-  uniform(hB, B_size);
+  auto opA = CUSPARSE_OPERATION_NON_TRANSPOSE;
+  auto opB = CUSPARSE_OPERATION_NON_TRANSPOSE;
+
+  std::vector<float> hA(A_size);
+  std::vector<float> hB(A_size);
+
+  uniform(hA.data(), A_size);
+  uniform(hB.data(), B_size);
 
   std::vector<bool> c_dense_data_h(C_size);
 
@@ -158,8 +164,8 @@ void test_main(BenchParams& params, Timer<double>& timer)
   CHECK_CUDA(cudaMalloc((void**)&dC_columns, c_true_nnz * sizeof(int64_t)));
   CHECK_CUDA(cudaMalloc((void**)&dC_values, c_true_nnz * sizeof(float)));
 
-  CHECK_CUDA(cudaMemcpy(dA, hA, A_size * sizeof(float), cudaMemcpyHostToDevice));
-  CHECK_CUDA(cudaMemcpy(dB, hB, B_size * sizeof(float), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(dA, hA.data(), A_size * sizeof(float), cudaMemcpyHostToDevice));
+  CHECK_CUDA(cudaMemcpy(dB, hB.data(), B_size * sizeof(float), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(
     dC_offsets, hC_offsets.data(), (params.m + 1) * sizeof(int64_t), cudaMemcpyHostToDevice));
   CHECK_CUDA(cudaMemcpy(
@@ -172,14 +178,24 @@ void test_main(BenchParams& params, Timer<double>& timer)
   cusparseDnMatDescr_t matA, matB;
   cusparseSpMatDescr_t matC;
   void* dBuffer     = NULL;
-  size_t bufferSize = 0;
   CHECK_CUSPARSE(cusparseCreate(&handle))
   // Create dense matrix A
-  CHECK_CUSPARSE(
-    cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_ROW))
+  if(params.a_is_row){
+    CHECK_CUSPARSE(
+      cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_ROW))
+  } else {
+    CHECK_CUSPARSE(
+      cusparseCreateDnMat(&matA, params.k, params.m, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_COL))
+  }
+
   // Create dense matrix B
-  CHECK_CUSPARSE(
-    cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
+  if(!params.a_is_row){
+    CHECK_CUSPARSE(
+      cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
+  } else {
+    CHECK_CUSPARSE(
+      cusparseCreateDnMat(&matB, params.n, params.k, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_ROW))
+  }
   // Create sparse matrix C in CSR format
   CHECK_CUSPARSE(cusparseCreateCsr(&matC,
                                    params.m,
@@ -199,8 +215,8 @@ void test_main(BenchParams& params, Timer<double>& timer)
   CHECK_CUSPARSE(cusparseSetStream(handle, stream));
   // allocate an external buffer if needed
   CHECK_CUSPARSE(cusparseSDDMM_bufferSize(handle,
-                                          CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                          CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                          opA,
+                                          opB,
                                           &params.alpha,
                                           matA,
                                           matB,
@@ -210,25 +226,25 @@ void test_main(BenchParams& params, Timer<double>& timer)
                                           CUSPARSE_SDDMM_ALG_DEFAULT,
                                           &bufferSize))
   CHECK_CUDA(cudaStreamSynchronize(stream));
-  CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize * 4))
+  CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
 
   // execute preprocess (optional)
-  //   CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
-  //                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
-  //                                           CUSPARSE_OPERATION_NON_TRANSPOSE,
-  //                                           &params.alpha,
-  //                                           matA,
-  //                                           matB,
-  //                                           &params.beta,
-  //                                           matC,
-  //                                           CUDA_R_32F,
-  //                                           CUSPARSE_SDDMM_ALG_DEFAULT,
-  //                                           dBuffer))
+  CHECK_CUSPARSE(cusparseSDDMM_preprocess(handle,
+                                          opA,
+                                          opB,
+                                          &params.alpha,
+                                          matA,
+                                          matB,
+                                          &params.beta,
+                                          matC,
+                                          CUDA_R_32F,
+                                          CUSPARSE_SDDMM_ALG_DEFAULT,
+                                          dBuffer))
 
   timer.start();
   CHECK_CUSPARSE(cusparseSDDMM(handle,
-                               CUSPARSE_OPERATION_NON_TRANSPOSE,
-                               CUSPARSE_OPERATION_NON_TRANSPOSE,
+                               opA,
+                               opB,
                                &params.alpha,
                                matA,
                                matB,
@@ -256,29 +272,26 @@ void test_main(BenchParams& params, Timer<double>& timer)
   CHECK_CUDA(cudaFree(dC_offsets))
   CHECK_CUDA(cudaFree(dC_columns))
   CHECK_CUDA(cudaFree(dC_values))
-
-  free(hA);
-  free(hB);
 }
 
 int main(void)
 {
-  std::vector<BenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f},
-                                 {1024 * 1024, 128, 1024, 0.1, 1.0f, 0.0f},
-                                 {1024 * 1024, 128, 1024, 0.2, 1.0f, 0.0f},
-                                 {1024 * 1024, 128, 1024, 0.5, 1.0f, 0.0f},
-                                 {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f},
-                                 {1024 * 1024, 1024, 1024, 0.1, 1.0f, 0.0f},
-                                 {1024 * 1024, 1024, 1024, 0.2, 1.0f, 0.0f},
-                                 {1024 * 1024, 1024, 1024, 0.5, 1.0f, 0.0f},
-                                 {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f},
-                                 {1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f},
-                                 {1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f},
-                                 {1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f},
-                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f},
-                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f},
-                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f},
-                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f}};
+  std::vector<BenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 128, 1024, 0.1, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 128, 1024, 0.2, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 128, 1024, 0.5, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 1024, 0.1, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 1024, 0.2, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 1024, 0.5, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false}};
 
   auto timer             = Timer<double>();
   int times              = 3;
@@ -297,8 +310,8 @@ int main(void)
       test_main(params, timer);
       accumulated_dur += timer.getResult();
     }
-    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity << "\t\t"
-              << params.alpha << "\t" << params.beta << "\t"
+    std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity
+              << "\t\t" << params.alpha << "\t" << params.beta << "\t"
               << accumulated_dur / static_cast<double>(1.0 * times) << "ms" << std::endl;
   }
 
