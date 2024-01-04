@@ -148,7 +148,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
   auto opB = CUSPARSE_OPERATION_NON_TRANSPOSE;
 
   std::vector<float> hA(A_size);
-  std::vector<float> hB(A_size);
+  std::vector<float> hB(B_size);
 
   uniform(hA.data(), A_size);
   uniform(hB.data(), B_size);
@@ -303,10 +303,10 @@ int main(void)
     {1024 * 1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false}};
 
   auto timer             = Timer<double>();
-  int times              = 3;
+  int times              = 2;
   size_t bufferSize      = 0;
   double accumulated_dur = 0.0;
-  std::cout << "buffersize\t"
+  std::cout << "buffer\t"
             << "m\t"
             << "k\t"
             << "n\t"
