@@ -127,7 +127,7 @@ void convert_to_csr(std::vector<bool>& matrix,
   }
 }
 
-void test_main(BenchParams& params, Timer<double>& timer, size_t &bufferSize)
+void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
 {
   // Host problem definition
   size_t lda    = params.k;
@@ -177,10 +177,10 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t &bufferSize)
   cusparseHandle_t handle = NULL;
   cusparseDnMatDescr_t matA, matB;
   cusparseSpMatDescr_t matC;
-  void* dBuffer     = NULL;
+  void* dBuffer = NULL;
   CHECK_CUSPARSE(cusparseCreate(&handle))
   // Create dense matrix A
-  if(params.a_is_row){
+  if (params.a_is_row) {
     CHECK_CUSPARSE(
       cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_ROW))
   } else {
@@ -189,7 +189,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t &bufferSize)
   }
 
   // Create dense matrix B
-  if(!params.a_is_row){
+  if (!params.a_is_row) {
     CHECK_CUSPARSE(
       cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
   } else {
@@ -276,26 +276,27 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t &bufferSize)
 
 int main(void)
 {
-  std::vector<BenchParams> cases{{1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 128, 1024, 0.1, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 128, 1024, 0.2, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 128, 1024, 0.5, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 1024, 1024, 0.1, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 1024, 1024, 0.2, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 1024, 1024, 0.5, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f, true, false},
-                                 {1024 * 1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false}};
+  std::vector<BenchParams> cases{
+    {1024 * 1024, 128, 1024, 0.01, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 128, 1024, 0.1, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 128, 1024, 0.2, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 128, 1024, 0.5, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 1024, 0.01, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 1024, 0.1, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 1024, 0.2, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 1024, 0.5, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f, true, false},
+    {1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false},
+    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.01, 1.0f, 0.0f, true, false},
+    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.1, 1.0f, 0.0f, true, false},
+    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.2, 1.0f, 0.0f, true, false},
+    {1024 * 1024 * 1024, 1024, 10 * 1024, 0.5, 1.0f, 0.0f, true, false}};
 
   auto timer             = Timer<double>();
   int times              = 3;
-  size_t bufferSize = 0;
+  size_t bufferSize      = 0;
   double accumulated_dur = 0.0;
   std::cout << "m\t"
             << "k\t"
@@ -306,7 +307,8 @@ int main(void)
             << "orderA\t"
             << "orderB\t"
             << "duration" << std::endl;
-  std::cout << "-------------------------------------------------------------------------------" << std::endl;
+  std::cout << "-------------------------------------------------------------------------------"
+            << std::endl;
   for (auto params : cases) {
     bufferSize = 0;
     test_main(params, timer, bufferSize);  // warmup
@@ -316,9 +318,8 @@ int main(void)
     }
     std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity
               << "\t\t" << params.alpha << "\t" << params.beta << "\t"
-              << (params.a_is_row ? "row" : "col") << "\t"
-              << (params.b_is_row ? "row" : "col") << "\t"
-              << accumulated_dur / static_cast<double>(1.0 * times) << "ms" << std::endl;
+              << (params.a_is_row ? "row" : "col") << "\t" << (params.b_is_row ? "row" : "col")
+              << "\t" << accumulated_dur / static_cast<double>(1.0 * times) << "ms" << std::endl;
   }
 
   //   std::vector<bool> c_dense_data_h{
