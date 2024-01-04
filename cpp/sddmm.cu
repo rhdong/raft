@@ -296,9 +296,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
     warmup = false;
   }
   CHECK_CUDA(cudaStreamDestroy(stream));
-  if(dBuffer != NULL) {
-    CHECK_CUDA(cudaFree(dBuffer))
-  }
+  if (dBuffer != NULL) { CHECK_CUDA(cudaFree(dBuffer)) }
 
   // destroy matrix/vector descriptors
   CHECK_CUSPARSE(cusparseDestroyDnMat(matA))
