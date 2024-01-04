@@ -234,6 +234,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
                                           CUSPARSE_SDDMM_ALG_DEFAULT,
                                           &bufferSize))
   CHECK_CUDA(cudaStreamSynchronize(stream));
+  std::cout << bufferSize;
   CHECK_CUDA(cudaMalloc(&dBuffer, bufferSize))
 
   // execute preprocess (optional)
@@ -306,7 +307,8 @@ int main(void)
   int times              = 3;
   size_t bufferSize      = 0;
   double accumulated_dur = 0.0;
-  std::cout << "m\t"
+  std::cout << "buffersize\t"
+            << "m\t"
             << "k\t"
             << "n\t"
             << "sparsity\t"
@@ -315,7 +317,7 @@ int main(void)
             << "orderA\t"
             << "orderB\t"
             << "duration" << std::endl;
-  std::cout << "--------------------------------------------------------------------------------"
+  std::cout << "----------------------------------------------------------------------------------------"
             << std::endl;
   for (auto params : cases) {
     bufferSize = 0;
