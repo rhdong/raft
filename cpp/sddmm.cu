@@ -194,7 +194,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
   // Perpare C and test
   std::vector<float> sparsity_list = {0.01, 0.01, 0.1, 0, 2, 0.5};
   size_t pre_buffer_size           = 0;
-  bool warmup = true;
+  bool warmup                      = true;
   for (float sp : sparsity_list) {
     std::vector<bool> c_dense_data_h(C_size);
     size_t c_true_nnz = create_sparse_matrix(params.m, params.n, sp, c_dense_data_h);
@@ -285,7 +285,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
     CHECK_CUDA(cudaFree(dC_columns))
     CHECK_CUDA(cudaFree(dC_values))
 
-    if(!warmup) {
+    if (!warmup) {
       std::cout << size_t(buffer_size / (1024 * 1024)) << "\t";
       std::cout << params.m << "\t\t" << params.k << "\t" << params.n << "\t" << sp << "\t\t"
                 << params.alpha << "\t" << params.beta << "\t" << (params.a_is_row ? "row" : "col")
