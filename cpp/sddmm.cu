@@ -242,7 +242,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
                                             &buffer_size))
     CHECK_CUDA(cudaStreamSynchronize(stream));
     if (buffer_size > pre_buffer_size) {
-      CHECK_CUDA(cudaFree(&dBuffer, buffer_size))
+      CHECK_CUDA(cudaFree(dBuffer))
       dBuffer = nullptr;
     }
     if (dBuffer == nullptr) {
