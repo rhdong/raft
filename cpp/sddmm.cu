@@ -192,7 +192,8 @@ void test_main(BenchParams& params, Timer<double>& timer)
   }
 
   // Perpare C and test
-  std::vector<float> sparsity_list = {0.01, 0.01, 0.1, 0, 2, 0.5};
+  // The first sparsity is only for warmup.
+  std::vector<float> sparsity_list = {0.001, 0.01, 0.1, 0.2, 0.5};
   size_t pre_buffer_size           = 0;
   bool warmup                      = true;
   for (float sp : sparsity_list) {
