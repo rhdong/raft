@@ -1,10 +1,18 @@
 #include <chrono>
-#include <cuda_runtime_api.h>  // cudaMalloc, cudaMemcpy, etc.
-#include <cusparse.h>          // cusparseSpMM
+#include <cuda_runtime_api.h>
+#include <cusparse.h>
+#include <iomanip>
 #include <iostream>
 #include <random>
-#include <stdio.h>   // printf
-#include <stdlib.h>  // EXIT_FAILURE
+#include <stdio.h>
+#include <stdlib.h>
+
+using std::cout;
+using std::endl;
+using std::fixed;
+using std::setfill;
+using std::setprecision;
+using std::setw;
 
 #define CHECK_CUDA(func)                                         \
   {                                                              \
@@ -189,7 +197,7 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
   }
 
   // Create dense matrix B
-  if (!params.a_is_row) {
+  if (!params.b_is_row) {
     CHECK_CUSPARSE(
       cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
   } else {
@@ -307,7 +315,7 @@ int main(void)
             << "orderA\t"
             << "orderB\t"
             << "duration" << std::endl;
-  std::cout << "-------------------------------------------------------------------------------"
+  std::cout << "--------------------------------------------------------------------------------"
             << std::endl;
   for (auto params : cases) {
     bufferSize = 0;
@@ -319,7 +327,9 @@ int main(void)
     std::cout << params.m << "\t" << params.k << "\t" << params.n << "\t" << params.sparsity
               << "\t\t" << params.alpha << "\t" << params.beta << "\t"
               << (params.a_is_row ? "row" : "col") << "\t" << (params.b_is_row ? "row" : "col")
-              << "\t" << accumulated_dur / static_cast<double>(1.0 * times) << "ms" << std::endl;
+              << "\t" << fixed << setprecision(3) << setw(6) << setfill(' ')
+              << static_cast<float>(accumulated_dur / static_cast<double>(1.0 * times)) << "ms"
+              << std::endl;
   }
 
   //   std::vector<bool> c_dense_data_h{
