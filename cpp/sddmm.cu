@@ -144,8 +144,8 @@ void test_main(BenchParams& params, Timer<double>& timer)
   size_t B_size = params.k * params.n;
   size_t C_size = params.m * params.n;
 
-  auto opA = params.a_is_row ? CUSPARSE_OPERATION_NON_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
-  auto opB = !params.b_is_row ? CUSPARSE_OPERATION_NON_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
+  auto opA = CUSPARSE_OPERATION_NON_TRANSPOSE;
+  auto opB = CUSPARSE_OPERATION_NON_TRANSPOSE;
 
   std::vector<float> hA(A_size);
   std::vector<float> hB(B_size);
