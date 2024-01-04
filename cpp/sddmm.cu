@@ -243,7 +243,7 @@ void test_main(BenchParams& params, Timer<double>& timer)
                                             CUSPARSE_SDDMM_ALG_DEFAULT,
                                             &buffer_size))
     CHECK_CUDA(cudaStreamSynchronize(stream));
-    if (buffer_size > pre_buffer_size) {
+    if (buffer_size > pre_buffer_size && dBuffer != NULL) {
       CHECK_CUDA(cudaFree(dBuffer))
       dBuffer = NULL;
     }
