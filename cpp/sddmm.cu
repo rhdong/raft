@@ -192,7 +192,8 @@ void test_main(BenchParams& params, Timer<double>& timer, size_t& bufferSize)
   }
 
   // Perpare C and test
-  for (float sp : {0.01, 0.1, 0, 2, 0.5}) {
+  std:: : vector<float> sparsity_list = {0.01, 0.1, 0, 2, 0.5};
+  for (float sp : sparsity_list) {
     std::vector<bool> c_dense_data_h(C_size);
     size_t c_true_nnz = create_sparse_matrix(params.m, params.n, params.sparsity, c_dense_data_h);
 
