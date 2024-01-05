@@ -355,9 +355,9 @@ static std::vector<SDDMMBenchParams<ValueType>> getInputs()
   };
 
   std::vector<TestSize> data_size{
-    {1024 * 1024, 128, 1024, 0.01},
-    {1024 * 1024, 1024, 1024, 0.01},
-    {1024 * 1024, 1024, 2 * 1024, 0.01},
+    {1024 * 1024, 128, 10, 0.01},
+    {1024 * 1024, 1024, 10, 0.01},
+    {1024 * 1024, 4096, 10, 0.01},
   };
 
   param_vec.reserve(data_size.size());

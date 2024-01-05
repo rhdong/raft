@@ -157,9 +157,9 @@ void gemm(raft::resources const& handle,
           int _M,
           int _N,
           int _K,
-          bool isZColMajor,
-          bool isXColMajor,
-          bool isYColMajor,
+          bool isZColMajor, false
+          bool isXColMajor, false
+          bool isYColMajor, true
           cudaStream_t stream,
           T* alpha,
           T* beta)
