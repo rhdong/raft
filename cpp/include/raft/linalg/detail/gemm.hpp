@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,9 +157,9 @@ void gemm(raft::resources const& handle,
           int _M,
           int _N,
           int _K,
-          bool isZColMajor, false
-          bool isXColMajor, false
-          bool isYColMajor, true
+          bool isZColMajor,
+          bool isXColMajor,
+          bool isYColMajor,
           cudaStream_t stream,
           T* alpha,
           T* beta)
