@@ -174,21 +174,9 @@ void test_main(BenchParams& params, Timer<double>& timer)
   CHECK_CUSPARSE(cusparseSetStream(handle, stream));
 
   // Create dense matrix A
-  if (params.a_is_row) {
-    CHECK_CUSPARSE(
-      cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_ROW))
-  } else {
-    CHECK_CUSPARSE(
-      cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, CUSPARSE_ORDER_COL))
-  }
-
-  if (!params.b_is_row) {
-    CHECK_CUSPARSE(
-      cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_COL))
-  } else {
-    CHECK_CUSPARSE(
-      cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, CUSPARSE_ORDER_ROW))
-  }
+  cusparseCreateDnMat(&matA, params.m, params.k, lda, dA, CUDA_R_32F, params.a_is_row ? CUSPARSE_ORDER_ROW : CUSPARSE_ORDER_COL))
+  CHECK_CUSPARSE(
+      cusparseCreateDnMat(&matB, params.k, params.n, ldb, dB, CUDA_R_32F, params.b_is_row ? CUSPARSE_ORDER_ROW : CUSPARSE_ORDER_COL))
 
   // Perpare C and test
   // The first sparsity is only for warmup.
