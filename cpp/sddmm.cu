@@ -64,9 +64,9 @@ struct Timer {
 };
 
 struct BenchParams {
-  size_t m;
-  size_t k;
   size_t n;
+  size_t k;
+  size_t m;
   float alpha = 1.0;
   float beta  = 0.0;
   bool a_is_row;
@@ -315,7 +315,9 @@ void test_main(BenchParams& params, Timer<double>& timer)
 
 int main(void)
 {
-  std::vector<BenchParams> cases{{1024 * 1024, 128, 1024, 1.0f, 0.0f, true, false},
+  std::vector<BenchParams> cases{{1024 * 1024, 128, 10, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 1024, 10, 1.0f, 0.0f, true, false},
+                                 {1024 * 1024, 128, 1024, 1.0f, 0.0f, true, false},
                                  {1024 * 1024, 1024, 1024, 1.0f, 0.0f, true, false},
                                  {1024 * 1024, 1024, 2 * 1024, 1.0f, 0.0f, true, false},
                                  {1024 * 1024, 128, 1024, 1.0f, 0.0f, false, true},
