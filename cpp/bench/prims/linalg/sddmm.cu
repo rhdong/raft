@@ -354,15 +354,25 @@ static std::vector<SDDMMBenchParams<ValueType>> getInputs()
     float sparsity;
   };
 
-  std::vector<TestSize> data_size{
-    {1024 * 1024, 128, 10, 0.01},
-    {1024 * 1024, 1024, 10, 0.01},
-    {1024 * 1024, 4096, 10, 0.01},
+std::vector<TestSize> data_size{{1024 * 1024, 128, 10, 1.0f},
+                               {1024 * 1024, 1024, 10, 1.0f},
+                               {1024 * 1024, 128, 1024, 1.0f},
+                               {1024 * 1024, 1024, 1024, 1.0f},
+                               {1024 * 1024, 1024, 2 * 1024, 1.0f},
+                               {1024 * 1024, 128, 1024, 1.0f},
+                               {1024 * 1024, 1024, 1024, 1.0f},
+                               {1024 * 1024, 1024, 2 * 1024, 1.0f},
+                               {1024 * 1024, 128, 1024, 1.0f},
+                               {1024 * 1024, 1024, 1024, 1.0f},
+                               {1024 * 1024, 1024, 2 * 1024, 1.0f},
+                               {1024 * 1024, 128, 1024, 1.0f},
+                               {1024 * 1024, 1024, 1024, 1.0f},
+                               {1024 * 1024, 1024, 2 * 1024, 1.0f}
   };
 
   param_vec.reserve(data_size.size());
   for (TestSize s : data_size) {
-    param_vec.push_back(SDDMMBenchParams<ValueType>({s.m, s.k, s.n, s.sparsity}));
+    param_vec.push_back(SDDMMBenchParams<ValueType>({s.n, s.k, s.m, s.sparsity}));
   }
   return param_vec;
 }
@@ -375,6 +385,5 @@ static std::vector<SDDMMBenchParams<ValueType>> getInputs()
 // Alg::SDDMM>), "", getInputs<float>());
 //
 RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, col_major, Alg::Inner>), "", getInputs<float>());
-RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, row_major, Alg::Inner>), "", getInputs<float>());
 
 }  // namespace raft::bench::linalg
