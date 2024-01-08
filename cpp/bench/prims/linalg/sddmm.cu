@@ -287,11 +287,12 @@ struct SDDMMBench : public fixture {
 
     auto c = raft::make_device_csr_matrix_view<ValueType>(c_data_d.data(), c_structure);
     raft::resource::get_cusparse_handle(handle);
-
     auto old_mr = rmm::mr::get_current_device_resource();
-    rmm::mr::pool_memory_resource<rmm::mr::device_memory_resource> pool_mr(
-      old_mr, 40 * 1024 * 1024 * 1024ull);
-    rmm::mr::set_current_device_resource(&pool_mr);
+    if (SDDMMorInner == Alg::SDDMM) {
+      rmm::mr::pool_memory_resource<rmm::mr::device_memory_resource> pool_mr(
+        old_mr, 10 * 1024 * 1024 * 1024ull);
+      rmm::mr::set_current_device_resource(&pool_mr);
+    }
 
     RAFT_CUDA_TRY(cudaStreamSynchronize(resource::get_cuda_stream(handle)));
 
@@ -355,7 +356,6 @@ static std::vector<SDDMMBenchParams<ValueType>> getInputs()
   };
 
 std::vector<TestSize> data_size{
-                               {1024 * 1024, 1024, 1024, 1.0f},
                                {1024 * 1024, 1024, 2 * 1024, 1.0f},
                                {1024 * 1024, 128, 1024, 1.0f},
                                {1024 * 1024, 1024, 1024, 1.0f},
