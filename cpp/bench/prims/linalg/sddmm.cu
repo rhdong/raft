@@ -370,7 +370,7 @@ std::vector<TestSize> data_size{
 
   param_vec.reserve(data_size.size());
   for (TestSize s : data_size) {
-    param_vec.push_back(SDDMMBenchParams<ValueType>({s.m, s.k, s.n, s.sparsity}));
+    param_vec.push_back(SDDMMBenchParams<ValueType>({s.n, s.k, s.m, s.sparsity}));
   }
   return param_vec;
 }
