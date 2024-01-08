@@ -113,9 +113,9 @@ class SDDMMTest : public ::testing::TestWithParam<SDDMMInputs<ValueType, IndexTy
     //       b_data_d.data(),
     //       ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.n : params.k),
     //       ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.k : params.n));
-    const bool ActuralLayoutPolicyA =
+    typename ActuralLayoutPolicyA =
       std::is_same_v<LayoutPolicyA, raft::col_major> ? raft::raw_major : raft::col_major;
-    const bool ActuralLayoutPolicyB =
+    typename ActuralLayoutPolicyB =
       std::is_same_v<LayoutPolicyB, raft::col_major> ? raft::raw_major : raft::col_major;
     auto b = raft::make_device_matrix_view<const ValueType, IndexType, ActuralLayoutPolicyA>(
       a_data_d.data(), params.k, params.m);
