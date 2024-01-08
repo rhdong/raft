@@ -64,8 +64,8 @@ void sddmm(raft::resources const& handle,
   static_assert(std::is_same_v<ValueType, float> || std::is_same_v<ValueType, double>,
                 "The `ValueType` of sddmm only supports float/double.");
 
-  auto descr_a = detail::create_descriptor(a, raft::is_row_major(a));
-  auto descr_b = detail::create_descriptor(b, raft::is_row_major(b));
+  auto descr_a = detail::create_descriptor(a);
+  auto descr_b = detail::create_descriptor(b);
   auto descr_c = detail::create_descriptor(c);
 
   detail::sddmm(handle,

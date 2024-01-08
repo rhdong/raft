@@ -31,13 +31,13 @@ namespace detail {
  * @tparam IndexType Type of dense_view
  * @tparam LayoutPolicy layout of dense_view
  * @param[in] dense_view input raft::device_matrix_view
- * @param[in] is_row_major data layout of raft::device_matrix_view
  * @returns dense matrix descriptor to be used by cuSparse API
  */
 template <typename ValueType, typename IndexType, typename LayoutPolicy>
 cusparseDnMatDescr_t create_descriptor(
-  raft::device_matrix_view<ValueType, IndexType, LayoutPolicy>& dense_view, const bool is_row_major)
+  raft::device_matrix_view<ValueType, IndexType, LayoutPolicy>& dense_view)
 {
+  bool is_row_major = raft::is_row_major(dense_view);
   auto order   = is_row_major ? CUSPARSE_ORDER_ROW : CUSPARSE_ORDER_COL;
   IndexType ld = is_row_major ? dense_view.stride(0) : dense_view.stride(1);
   cusparseDnMatDescr_t descr;
