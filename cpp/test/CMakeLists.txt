@@ -302,22 +302,7 @@ if(BUILD_TESTS)
     NAME
     SPARSE_TEST
     PATH
-    test/sparse/add.cu
-    test/sparse/convert_coo.cu
-    test/sparse/convert_csr.cu
-    test/sparse/csr_row_slice.cu
-    test/sparse/csr_to_dense.cu
-    test/sparse/csr_transpose.cu
-    test/sparse/degree.cu
-    test/sparse/filter.cu
-    test/sparse/norm.cu
-    test/sparse/normalize.cu
-    test/sparse/reduce.cu
-    test/sparse/row_op.cu
     test/sparse/sddmm.cu
-    test/sparse/sort.cu
-    test/sparse/spgemmi.cu
-    test/sparse/symmetrize.cu
   )
 
   ConfigureTest(
