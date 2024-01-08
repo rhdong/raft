@@ -20,6 +20,7 @@
 #include <limits>
 
 #include <raft/core/resource/cuda_stream.hpp>
+#include <raft/core/device_mdspan.hpp>
 #include <raft/core/resources.hpp>
 #include <raft/sparse/linalg/sddmm.cuh>
 #include <raft/util/cudart_utils.hpp>
