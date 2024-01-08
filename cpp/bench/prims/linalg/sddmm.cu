@@ -355,7 +355,10 @@ static std::vector<SDDMMBenchParams<ValueType>> getInputs()
     float sparsity;
   };
 
-std::vector<TestSize> data_size{
+std::vector<TestSize> data_size{{1024 * 1024, 128, 10, 0.1f},
+                                 {1024 * 1024, 1024, 10, 0.1f},
+                                 {1024 * 1024, 128, 1024, 0.1f},
+                                 {1024 * 1024, 1024, 1024, 0.1f},
                                {1024 * 1024, 1024, 2 * 1024, 0.1f},
                                {1024 * 1024, 128, 1024, 0.1f},
                                {1024 * 1024, 1024, 1024, 0.1f},
