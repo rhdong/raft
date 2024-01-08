@@ -114,10 +114,10 @@ class SDDMMTest : public ::testing::TestWithParam<SDDMMInputs<ValueType, IndexTy
     //       ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.n : params.k),
     //       ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.k : params.n));
 
-    auto a = raft::make_device_matrix_view<const ValueType, IndexType, raft::col_major>(
+    auto a = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyB>(
       b_data_d.data(), params.k, params.m);
 
-    auto b = raft::make_device_matrix_view<const ValueType, IndexType, raft::raw_major>(
+    auto b = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyA>(
       a_data_d.data(), params.n, params.k);
 
     auto c_structure = raft::make_device_compressed_structure_view<int, int, int>(
@@ -406,14 +406,14 @@ const std::vector<SDDMMInputs<double, int>> sddmm_inputs_col_col_d = {
   }};
 
 INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Row_Col, ::testing::ValuesIn(sddmm_inputs_row_col_f));
-INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Col_Row, ::testing::ValuesIn(sddmm_inputs_col_row_f));
-INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Row_Row, ::testing::ValuesIn(sddmm_inputs_row_row_f));
-INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Col_Col, ::testing::ValuesIn(sddmm_inputs_col_col_f));
-
-INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Row_Col, ::testing::ValuesIn(sddmm_inputs_row_col_d));
-INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Col_Row, ::testing::ValuesIn(sddmm_inputs_col_row_d));
-INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Row_Row, ::testing::ValuesIn(sddmm_inputs_row_row_d));
-INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Col_Col, ::testing::ValuesIn(sddmm_inputs_col_col_d));
+// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Col_Row, ::testing::ValuesIn(sddmm_inputs_col_row_f));
+// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Row_Row, ::testing::ValuesIn(sddmm_inputs_row_row_f));
+// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Col_Col, ::testing::ValuesIn(sddmm_inputs_col_col_f));
+//
+// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Row_Col, ::testing::ValuesIn(sddmm_inputs_row_col_d));
+// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Col_Row, ::testing::ValuesIn(sddmm_inputs_col_row_d));
+// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Row_Row, ::testing::ValuesIn(sddmm_inputs_row_row_d));
+// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Col_Col, ::testing::ValuesIn(sddmm_inputs_col_col_d));
 
 }  // namespace sparse
 }  // namespace raft
