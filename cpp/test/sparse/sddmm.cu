@@ -19,8 +19,8 @@
 #include <iostream>
 #include <limits>
 
-#include <raft/core/resource/cuda_stream.hpp>
 #include <raft/core/device_mdspan.hpp>
+#include <raft/core/resource/cuda_stream.hpp>
 #include <raft/core/resources.hpp>
 #include <raft/sparse/linalg/sddmm.cuh>
 #include <raft/util/cudart_utils.hpp>
@@ -107,18 +107,12 @@ class SDDMMTest : public ::testing::TestWithParam<SDDMMInputs<ValueType, IndexTy
     ASSERT_EQ(params.c_data.size(), params.c_indices.size());
     ASSERT_GE(params.c_indices.size(), 0);
 
-    //     auto a = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyA>(
-    //       a_data_d.data(), params.m, params.k);
-    //     auto b = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyB>(
-    //       b_data_d.data(),
-    //       ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.n : params.k),
-    //       ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.k : params.n));
-
-    auto a = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyB>(
-      b_data_d.data(), params.k, params.m);
-
-    auto b = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyA>(
-      a_data_d.data(), params.n, params.k);
+    auto a = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyA>(
+      a_data_d.data(), params.m, params.k);
+    auto b = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyB>(
+      b_data_d.data(),
+      ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.n : params.k),
+      ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.k : params.n));
 
     auto c_structure = raft::make_device_compressed_structure_view<int, int, int>(
       c_indptr_d.data(),
@@ -165,26 +159,26 @@ class SDDMMTest : public ::testing::TestWithParam<SDDMMInputs<ValueType, IndexTy
 using SDDMMTestF_Row_Col = SDDMMTest<float, int, raft::row_major, raft::col_major>;
 TEST_P(SDDMMTestF_Row_Col, Result) { Run(); }
 
-// using SDDMMTestF_Col_Row = SDDMMTest<float, int, raft::col_major, raft::row_major>;
-// TEST_P(SDDMMTestF_Col_Row, Result) { Run(); }
-//
-// using SDDMMTestF_Row_Row = SDDMMTest<float, int, raft::row_major, raft::row_major>;
-// TEST_P(SDDMMTestF_Row_Row, Result) { Run(); }
-//
-// using SDDMMTestF_Col_Col = SDDMMTest<float, int, raft::col_major, raft::col_major>;
-// TEST_P(SDDMMTestF_Col_Col, Result) { Run(); }
-//
-// using SDDMMTestD_Row_Col = SDDMMTest<double, int, raft::row_major, raft::col_major>;
-// TEST_P(SDDMMTestD_Row_Col, Result) { Run(); }
-//
-// using SDDMMTestD_Col_Row = SDDMMTest<double, int, raft::col_major, raft::row_major>;
-// TEST_P(SDDMMTestD_Col_Row, Result) { Run(); }
-//
-// using SDDMMTestD_Row_Row = SDDMMTest<double, int, raft::row_major, raft::row_major>;
-// TEST_P(SDDMMTestD_Row_Row, Result) { Run(); }
-//
-// using SDDMMTestD_Col_Col = SDDMMTest<double, int, raft::col_major, raft::col_major>;
-// TEST_P(SDDMMTestD_Col_Col, Result) { Run(); }
+using SDDMMTestF_Col_Row = SDDMMTest<float, int, raft::col_major, raft::row_major>;
+TEST_P(SDDMMTestF_Col_Row, Result) { Run(); }
+
+using SDDMMTestF_Row_Row = SDDMMTest<float, int, raft::row_major, raft::row_major>;
+TEST_P(SDDMMTestF_Row_Row, Result) { Run(); }
+
+using SDDMMTestF_Col_Col = SDDMMTest<float, int, raft::col_major, raft::col_major>;
+TEST_P(SDDMMTestF_Col_Col, Result) { Run(); }
+
+using SDDMMTestD_Row_Col = SDDMMTest<double, int, raft::row_major, raft::col_major>;
+TEST_P(SDDMMTestD_Row_Col, Result) { Run(); }
+
+using SDDMMTestD_Col_Row = SDDMMTest<double, int, raft::col_major, raft::row_major>;
+TEST_P(SDDMMTestD_Col_Row, Result) { Run(); }
+
+using SDDMMTestD_Row_Row = SDDMMTest<double, int, raft::row_major, raft::row_major>;
+TEST_P(SDDMMTestD_Row_Row, Result) { Run(); }
+
+using SDDMMTestD_Col_Col = SDDMMTest<double, int, raft::col_major, raft::col_major>;
+TEST_P(SDDMMTestD_Col_Col, Result) { Run(); }
 
 const std::vector<SDDMMInputs<float, int>> sddmm_inputs_row_col_f = {
   {
@@ -406,14 +400,14 @@ const std::vector<SDDMMInputs<double, int>> sddmm_inputs_col_col_d = {
   }};
 
 INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Row_Col, ::testing::ValuesIn(sddmm_inputs_row_col_f));
-// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Col_Row, ::testing::ValuesIn(sddmm_inputs_col_row_f));
-// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Row_Row, ::testing::ValuesIn(sddmm_inputs_row_row_f));
-// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Col_Col, ::testing::ValuesIn(sddmm_inputs_col_col_f));
-//
-// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Row_Col, ::testing::ValuesIn(sddmm_inputs_row_col_d));
-// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Col_Row, ::testing::ValuesIn(sddmm_inputs_col_row_d));
-// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Row_Row, ::testing::ValuesIn(sddmm_inputs_row_row_d));
-// INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Col_Col, ::testing::ValuesIn(sddmm_inputs_col_col_d));
+INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Col_Row, ::testing::ValuesIn(sddmm_inputs_col_row_f));
+INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Row_Row, ::testing::ValuesIn(sddmm_inputs_row_row_f));
+INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestF_Col_Col, ::testing::ValuesIn(sddmm_inputs_col_col_f));
+
+INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Row_Col, ::testing::ValuesIn(sddmm_inputs_row_col_d));
+INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Col_Row, ::testing::ValuesIn(sddmm_inputs_col_row_d));
+INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Row_Row, ::testing::ValuesIn(sddmm_inputs_row_row_d));
+INSTANTIATE_TEST_CASE_P(SDDMMTest, SDDMMTestD_Col_Col, ::testing::ValuesIn(sddmm_inputs_col_col_d));
 
 }  // namespace sparse
 }  // namespace raft
