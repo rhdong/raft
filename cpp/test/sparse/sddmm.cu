@@ -106,12 +106,18 @@ class SDDMMTest : public ::testing::TestWithParam<SDDMMInputs<ValueType, IndexTy
     ASSERT_EQ(params.c_data.size(), params.c_indices.size());
     ASSERT_GE(params.c_indices.size(), 0);
 
-    auto a = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyA>(
-      a_data_d.data(), params.m, params.k);
+//     auto a = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyA>(
+//       a_data_d.data(), params.m, params.k);
+//     auto b = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyB>(
+//       b_data_d.data(),
+//       ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.n : params.k),
+//       ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.k : params.n));
     auto b = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyB>(
+      a_data_d.data(), params.k, params.m);
+    auto a = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyA>(
       b_data_d.data(),
-      ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.n : params.k),
-      ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.k : params.n));
+      ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.k : params.n),
+      ((std::is_same_v<LayoutPolicyA, LayoutPolicyB>) ? params.n : params.k));
 
     auto c_structure = raft::make_device_compressed_structure_view<int, int, int>(
       c_indptr_d.data(),
