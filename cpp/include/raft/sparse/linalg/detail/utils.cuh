@@ -38,8 +38,8 @@ cusparseDnMatDescr_t create_descriptor(
   raft::device_matrix_view<ValueType, IndexType, LayoutPolicy>& dense_view)
 {
   bool is_row_major = raft::is_row_major(dense_view);
-  auto order   = is_row_major ? CUSPARSE_ORDER_ROW : CUSPARSE_ORDER_COL;
-  IndexType ld = is_row_major ? dense_view.stride(0) : dense_view.stride(1);
+  auto order        = is_row_major ? CUSPARSE_ORDER_ROW : CUSPARSE_ORDER_COL;
+  IndexType ld      = is_row_major ? dense_view.stride(0) : dense_view.stride(1);
   cusparseDnMatDescr_t descr;
   RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsecreatednmat(
     &descr,
