@@ -36,19 +36,31 @@ namespace detail {
  */
 template <typename ValueType, typename IndexType, typename LayoutPolicy>
 cusparseDnMatDescr_t create_descriptor(
-  raft::device_matrix_view<ValueType, IndexType, LayoutPolicy>& dense_view)
+  raft::device_matrix_view<ValueType, IndexType, LayoutPolicy>& dense_view, bool transpose_view = false)
 {
-  bool is_row_major = raft::is_row_major(dense_view);
-  auto order        = is_row_major ? CUSPARSE_ORDER_ROW : CUSPARSE_ORDER_COL;
-  IndexType ld      = is_row_major ? dense_view.stride(0) : dense_view.stride(1);
   cusparseDnMatDescr_t descr;
-  RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsecreatednmat(
-    &descr,
-    dense_view.extent(0),
-    dense_view.extent(1),
-    ld,
-    const_cast<std::remove_const_t<ValueType>*>(dense_view.data_handle()),
-    order));
+  bool is_row_major = raft::is_row_major(dense_view);
+  if(!transpose_view){
+    auto order        = is_row_major ? CUSPARSE_ORDER_ROW : CUSPARSE_ORDER_COL;
+    IndexType ld      = is_row_major ? dense_view.stride(0) : dense_view.stride(1);
+    RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsecreatednmat(
+      &descr,
+      dense_view.extent(0),
+      dense_view.extent(1),
+      ld,
+      const_cast<std::remove_const_t<ValueType>*>(dense_view.data_handle()),
+      order));
+  } else {
+    auto order        = is_row_major ? CUSPARSE_ORDER_COL : CUSPARSE_ORDER_RAW;
+    IndexType ld      = is_row_major ? dense_view.stride(1) : dense_view.stride(0);
+    RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsecreatednmat(
+      &descr,
+      dense_view.extent(1),
+      dense_view.extent(0),
+      ld,
+      const_cast<std::remove_const_t<ValueType>*>(dense_view.data_handle()),
+      order));
+  }
   return descr;
 }
 
