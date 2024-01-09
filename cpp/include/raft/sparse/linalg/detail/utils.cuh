@@ -52,7 +52,7 @@ cusparseDnMatDescr_t create_descriptor(
       const_cast<std::remove_const_t<ValueType>*>(dense_view.data_handle()),
       order));
   } else {
-    auto order   = is_row_major ? CUSPARSE_ORDER_COL : CUSPARSE_ORDER_RAW;
+    auto order   = is_row_major ? CUSPARSE_ORDER_COL : CUSPARSE_ORDER_ROW;
     IndexType ld = is_row_major ? dense_view.stride(1) : dense_view.stride(0);
     RAFT_CUSPARSE_TRY(raft::sparse::detail::cusparsecreatednmat(
       &descr,
