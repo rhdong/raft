@@ -117,8 +117,8 @@ class SDDMMTest : public ::testing::TestWithParam<SDDMMInputs<ValueType, IndexTy
     auto c_structure = raft::make_device_compressed_structure_view<int, int, int>(
       c_indptr_d.data(),
       c_indices_d.data(),
-      params.n,
       params.m,
+      params.n,
       static_cast<IndexType>(c_indices_d.size()));
 
     auto c = raft::make_device_csr_matrix_view<ValueType>(c_data_d.data(), c_structure);
