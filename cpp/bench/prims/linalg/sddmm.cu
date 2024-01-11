@@ -22,6 +22,7 @@
 #include <raft/distance/distance_types.hpp>
 #include <raft/random/rng.cuh>
 #include <raft/sparse/linalg/sddmm.cuh>
+#include <raft/util/itertools.hpp>
 
 #include <raft/core/resource/cuda_stream.hpp>
 #include <raft/core/resources.hpp>
@@ -65,10 +66,12 @@ using col_major = col_major;
 
 template <typename ValueType>
 struct SDDMMBenchParams {
-  size_t m;  // m parameter of the SDDMM
-  size_t k;  // k parameter of the SDDMM
-  size_t n;  // n parameter of the SDDMM
+  size_t m;
+  size_t k;
+  size_t n;
   float sparsity;
+  bool transpose_a;
+  bool transpose_b;
   ValueType alpha = 1.0;
   ValueType beta  = 0.0;
 };
@@ -331,31 +334,27 @@ template <typename ValueType>
 static std::vector<SDDMMBenchParams<ValueType>> getInputs()
 {
   std::vector<SDDMMBenchParams<ValueType>> param_vec;
-  struct TestSize {
+  struct TestParams {
     size_t m;
     size_t k;
     size_t n;
+    bool transpose_a;
+    bool transpose_b;
     float sparsity;
   };
 
-  std::vector<TestSize> data_size{{1024 * 1024, 128, 10, 0.1f},
-                                  {1024 * 1024, 1024, 10, 0.1f},
-                                  {1024 * 1024, 128, 1024, 0.1f},
-                                  {1024 * 1024, 1024, 1024, 0.1f},
-                                  {1024 * 1024, 1024, 2 * 1024, 0.1f},
-                                  {1024 * 1024, 128, 1024, 0.1f},
-                                  {1024 * 1024, 1024, 1024, 0.1f},
-                                  {1024 * 1024, 1024, 2 * 1024, 0.1f},
-                                  {1024 * 1024, 128, 1024, 0.1f},
-                                  {1024 * 1024, 1024, 1024, 0.1f},
-                                  {1024 * 1024, 1024, 2 * 1024, 0.1f},
-                                  {1024 * 1024, 128, 1024, 0.1f},
-                                  {1024 * 1024, 1024, 1024, 0.1f},
-                                  {1024 * 1024, 1024, 2 * 1024, 0.1f}};
+  const std::vector<TestParams> params_group =
+    raft::util::itertools::product<TestParams>({size_t(10), size_t(1024)},
+                                               {size_t(128), size_t(1024)},
+                                               {size_t(1024 * 1024)},
+                                               {false},
+                                               {false},
+                                               {0.01f, 0.1f, 0.2f});
 
-  param_vec.reserve(data_size.size());
-  for (TestSize s : data_size) {
-    param_vec.push_back(SDDMMBenchParams<ValueType>({s.n, s.k, s.m, s.sparsity}));
+  param_vec.reserve(params_group.size());
+  for (TestParams params : params_group) {
+    param_vec.push_back(SDDMMBenchParams<ValueType>(
+      {params.m, params.k, params.n, params.sparsity, params.transpose_a, params.transpose_b}));
   }
   return param_vec;
 }
