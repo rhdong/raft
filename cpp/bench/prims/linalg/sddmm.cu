@@ -76,6 +76,15 @@ struct SDDMMBenchParams {
   ValueType beta  = 0.0;
 };
 
+template <typename ValueType>
+inline auto operator<<(std::ostream& os, const SDDMMBenchParams<ValueType>& params) -> std::ostream&
+{
+  os << " m*k*n=" << params.m << "*" << params.k << "*" << params.n
+     << "\tsparsity=" << params.sparsity << "\ttrans_a=" << (params.transpose_a ? "T" : "F")
+     << " trans_b=" << (params.transpose_b ? "T" : "F");
+  return os;
+}
+
 enum Alg { SDDMM, Inner };
 
 template <typename ValueType,
@@ -256,7 +265,10 @@ struct SDDMMBench : public fixture {
 
   void run_benchmark(::benchmark::State& state) override
   {
-    // make matrix view
+    std::ostringstream label_stream;
+    label_stream << params;
+    state.SetLabel(label_stream.str());
+
     auto a = raft::make_device_matrix_view<const ValueType, IndexType, LayoutPolicyA>(
       a_data_d.data(), params.m, params.k);
 
@@ -297,8 +309,7 @@ struct SDDMMBench : public fixture {
                                     c,
                                     raft::make_host_scalar_view<ValueType>(&params.alpha),
                                     raft::make_host_scalar_view<ValueType>(&params.beta));
-        RAFT_CUDA_TRY(cudaStreamSynchronize(resource::get_cuda_stream(handle)));
-        //         test_main();
+        resource::sync_stream(handle);
       } else {
         raft::distance::pairwise_distance(handle,
                                           a_data_d.data(),
@@ -309,7 +320,7 @@ struct SDDMMBench : public fixture {
                                           static_cast<int>(params.k),
                                           raft::distance::DistanceType::InnerProduct,
                                           std::is_same_v<LayoutPolicyA, row_major>);
-        RAFT_CUDA_TRY(cudaStreamSynchronize(resource::get_cuda_stream(handle)));
+        resource::sync_stream(handle);
       }
     });
 
