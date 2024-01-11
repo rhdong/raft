@@ -126,44 +126,25 @@ struct SDDMMBench : public fixture {
   void convert_to_csr(std::vector<bool>& matrix,
                       size_t rows,
                       size_t cols,
-                      std::vector<ValueType>& values,
-                      std::vector<IndexType>& indices,
-                      std::vector<IndexType>& indptr)
+                      float* values,
+                      IndexType* indices,
+                      IndexType* indptr)
   {
-    indptr.push_back(0);
+    IndexType offset_indptr = 0;
+    IndexType offset_values = 0;
+    indptr[offset_indptr++] = 0;
 
     for (size_t i = 0; i < rows; ++i) {
       for (size_t j = 0; j < cols; ++j) {
         if (matrix[i * cols + j]) {
-          values.push_back(static_cast<ValueType>(1.0f));
-          indices.push_back(static_cast<IndexType>(j));
+          values[offset_values]  = static_cast<float>(1.0f);
+          indices[offset_values] = static_cast<IndexType>(j);
+          offset_values++;
         }
       }
-      indptr.push_back(static_cast<IndexType>(values.size()));
+      indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
     }
   }
-  //   void convert_to_csr(std::vector<bool>& matrix,
-  //                       size_t rows,
-  //                       size_t cols,
-  //                       float* values,
-  //                       IndexType* indices,
-  //                       IndexType* indptr)
-  //   {
-  //     IndexType offset_indptr = 0;
-  //     IndexType offset_values = 0;
-  //     indptr[offset_indptr++] = 0;
-  //
-  //     for (size_t i = 0; i < rows; ++i) {
-  //       for (size_t j = 0; j < cols; ++j) {
-  //         if (matrix[i * cols + j]) {
-  //           values[offset_values]  = static_cast<float>(1.0f);
-  //           indices[offset_values] = static_cast<IndexType>(j);
-  //           offset_values++;
-  //         }
-  //       }
-  //       indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
-  //     }
-  //   }
   size_t create_sparse_matrix(size_t m, size_t n, float sparsity, std::vector<bool>& matrix)
   {
     size_t total_elements = static_cast<size_t>(m * n);
