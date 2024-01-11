@@ -370,13 +370,14 @@ static std::vector<SDDMMBenchParams<ValueType>> getInputs()
   return param_vec;
 }
 
-// RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, col_major, Alg::SDDMM>), "",
-// getInputs<float>()); RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, row_major, Alg::SDDMM>),
+RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, col_major, Alg::SDDMM>), "", getInputs<float>());
+// RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, row_major, Alg::SDDMM>),
 // "", getInputs<float>()); RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, row_major,
 // Alg::SDDMM>),
 // "", getInputs<float>()); RAFT_BENCH_REGISTER((SDDMMBench<float, col_major, col_major,
 // Alg::SDDMM>), "", getInputs<float>());
 //
-RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, col_major, Alg::Inner>), "", getInputs<float>());
+// RAFT_BENCH_REGISTER((SDDMMBench<float, row_major, col_major, Alg::Inner>), "",
+// getInputs<float>());
 
 }  // namespace raft::bench::linalg
