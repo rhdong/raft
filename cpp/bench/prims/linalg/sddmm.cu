@@ -145,7 +145,7 @@ struct SDDMMBench : public fixture {
       indptr[offset_indptr++] = static_cast<IndexType>(offset_values);
     }
   }
-  
+
   size_t create_sparse_matrix(size_t m, size_t n, float sparsity, std::vector<bool>& matrix)
   {
     size_t total_elements = static_cast<size_t>(m * n);
@@ -284,7 +284,14 @@ struct SDDMMBench : public fixture {
                                 c,
                                 raft::make_host_scalar_view<ValueType>(&params.alpha),
                                 raft::make_host_scalar_view<ValueType>(&params.beta));
+    resource::sync_stream(handle);
 
+    auto old_mr = rmm::mr::get_current_device_resource();
+    if (SDDMMorInner == Alg::SDDMM) {
+      rmm::mr::pool_memory_resource<rmm::mr::device_memory_resource> pool_mr(
+        old_mr, 60 * 1024 * 1024 * 1024ull);
+      rmm::mr::set_current_device_resource(&pool_mr);
+    }
     loop_on_state(state, [this, &a, &b, &c]() {
       if (SDDMMorInner == Alg::SDDMM) {
         raft::sparse::linalg::sddmm(handle,
