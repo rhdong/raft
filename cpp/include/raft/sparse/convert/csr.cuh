@@ -115,7 +115,7 @@ void adj_to_csr(raft::resources const& handle,
  *
  * @param[in]    handle      RAFT handle
  * @param[in]    bitmap      input raft::bitmap_view
- * @param[inout] csr         output raft::device_csr_matrix_view
+ * @param[out]   csr         output raft::device_csr_matrix_view
  */
 template <typename bitmap_t, typename index_t, typename value_t, typename nnz_t>
 void bitmap_to_csr(raft::resources const& handle,
@@ -127,6 +127,7 @@ void bitmap_to_csr(raft::resources const& handle,
                         bitmap.data(),
                         csr_view.get_n_rows(),
                         csr_view.get_n_cols(),
+                        csr_view.get_nnz(),
                         csr_view.get_indptr().data(),
                         csr_view.get_indices().data());
 }
