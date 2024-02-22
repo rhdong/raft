@@ -343,6 +343,17 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
     std::vector<bitmap_t> bitmap_h(element);
     nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, bitmap_h);
 
+    std::cout << "nnz: " << nnz << std::endl;
+    for(int r = 0; r < params.n_rows; r++){
+      for(int c = 0; c < params.n_cols; c++){
+        index_t idx = (r * params.n_cols + c) / (sizeof(bitmap_t) * 8);
+        index_t bit = (r * params.n_cols + c) - idx * (sizeof(bitmap_t) * 8);
+
+        std::cout << bitmap_h[idx] & (index_t(1) << bit) << "+";
+      }
+      std::cout << std::endl;
+    }
+
     std::vector<index_t> indices_h(nnz);
     std::vector<index_t> indptr_h(params.n_rows + 1);
 
