@@ -112,7 +112,6 @@ __device__ inline value_t warp_exclusive(value_t value)
     value_t n = __shfl_up_sync(0xffffffff, sum, i, warpSize);
     if (lane_id >= i) { sum += n; }
   }
-  printf("Thread %d final value = %d, sum = %d\n", threadIdx.x, value, sum);
   return sum;
 }
 
