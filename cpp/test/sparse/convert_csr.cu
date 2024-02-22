@@ -349,7 +349,7 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
         index_t idx = (r * params.n_cols + c) / (sizeof(bitmap_t) * 8);
         index_t bit = (r * params.n_cols + c) - idx * (sizeof(bitmap_t) * 8);
 
-        std::cout << bitmap_h[idx] & (index_t(1) << bit) << "+";
+        std::cout << ((bitmap_h[idx] & (index_t(1) << bit)) ? 1 : 0) << "+";
       }
       std::cout << std::endl;
     }
