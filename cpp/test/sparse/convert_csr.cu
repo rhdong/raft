@@ -321,7 +321,7 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
       std::sort(cols1.begin(), cols1.end());
       std::sort(cols2.begin(), cols2.end());
 
-//       if (cols1 != cols2) { return false; }
+      if (cols1 != cols2) { return false; }
     }
 
     return true;
