@@ -134,16 +134,19 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
   int lane_id = threadIdx.x & 0x1f;
 
   for (index_t row = blockIdx.x; row < num_rows; row += gridDim.x) {
-    index_t offset = lane_id * BITS_PER_BITMAP;
+    index_t offset = 0;
     index_t g_sum  = 0;
     index_t s_bit  = row * num_cols;
     index_t e_bit  = s_bit + num_cols;
 
-    bitmap_t bitmap = bitmap_t(0);
 
     while (offset < num_cols) {
       index_t bitmap_idx = (s_bit + offset) / BITS_PER_BITMAP;
-      bitmap_t l_bitmap  = bitmap[bitmap_idx];
+      bitmap_t l_bitmap = bitmap_t(0);
+
+      if(offset + lane_id * BITS_PER_BITMAP < e_bit) {
+        l_bitmap  = bitmap[bitmap_idx];
+      }
 
       if (s_bit > bitmap_idx * BITS_PER_BITMAP) {
         l_bitmap >> (s_bit - bitmap_idx * BITS_PER_BITMAP);
@@ -157,9 +160,9 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
 
       index_t l_sum = warp_exclusive(static_cast<index_t>(raft::detail::popc(l_bitmap)));
 
-      for (int i = 0; i < warpSize; i++) {
+      for (int i = 0; i < BITS_PER_BITMAP; i++) {
         if(l_bitmap & (ONE << i)) {
-          indices[indptr[row] + g_sum + l_sum] = offset + lane_id * warpSize + i;
+          indices[indptr[row] + g_sum + l_sum] = offset + lane_id * BITS_PER_BITMAP + i;
           l_sum++;
         }
       }
