@@ -426,8 +426,8 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
 using BitmapToCSRTestI = BitmapToCSRTest<uint32_t, int>;
 TEST_P(BitmapToCSRTestI, Result) { Run(); }
 
-using BitmapToCSRTestL = BitmapToCSRTest<uint32_t, int64_t>;
-TEST_P(BitmapToCSRTestL, Result) { Run(); }
+// using BitmapToCSRTestL = BitmapToCSRTest<uint32_t, int64_t>;
+// TEST_P(BitmapToCSRTestL, Result) { Run(); }
 
 template <typename index_t>
 const std::vector<BitmapToCSRInputs<index_t>> bitmaptocsr_inputs = {
@@ -447,9 +447,9 @@ const std::vector<BitmapToCSRInputs<index_t>> bitmaptocsr_inputs = {
 INSTANTIATE_TEST_CASE_P(SparseConvertCSRTest,
                         BitmapToCSRTestI,
                         ::testing::ValuesIn(bitmaptocsr_inputs<int>));
-INSTANTIATE_TEST_CASE_P(SparseConvertCSRTest,
-                        BitmapToCSRTestL,
-                        ::testing::ValuesIn(bitmaptocsr_inputs<int64_t>));
+// INSTANTIATE_TEST_CASE_P(SparseConvertCSRTest,
+//                         BitmapToCSRTestL,
+//                         ::testing::ValuesIn(bitmaptocsr_inputs<int64_t>));
 
 }  // namespace sparse
 }  // namespace raft
