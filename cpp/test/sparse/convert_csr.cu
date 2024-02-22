@@ -309,7 +309,7 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
 
     if (col_indices1.size() != col_indices2.size()) { return false; }
 
-//     if (!std::equal(row_ptrs1.begin(), row_ptrs1.end(), row_ptrs2.begin())) { return false; }
+    if (!std::equal(row_ptrs1.begin(), row_ptrs1.end(), row_ptrs2.begin())) { return false; }
 
     for (size_t i = 0; i < row_ptrs1.size() - 1; ++i) {
       size_t start_idx = row_ptrs1[i];
