@@ -149,13 +149,13 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
       }
 
       if (s_bit > bitmap_idx * BITS_PER_BITMAP) {
-        l_bitmap >> (s_bit - bitmap_idx * BITS_PER_BITMAP);
-        l_bitmap << (s_bit - bitmap_idx * BITS_PER_BITMAP);
+        l_bitmap >>= (s_bit - bitmap_idx * BITS_PER_BITMAP);
+        l_bitmap <<= (s_bit - bitmap_idx * BITS_PER_BITMAP);
       }
 
       if ((bitmap_idx + 1) * BITS_PER_BITMAP > e_bit) {
-        l_bitmap << ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
-        l_bitmap >> ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
+        l_bitmap <<= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
+        l_bitmap >>= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
       }
 
       index_t l_sum = warp_exclusive(static_cast<index_t>(raft::detail::popc(l_bitmap)));
