@@ -159,7 +159,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
       index_t l_sum = warp_exclusive(static_cast<index_t>(raft::detail::popc(l_bitmap)));
 
       for (int i = 0; i < warpSize; i++) {
-        if(l_bitmap & (ONE << i) {
+        if(l_bitmap & (ONE << i)) {
           indices[indptr[row] + g_sum + l_sum] = offset + lane_id * warpSize + i;
           l_sum++;
         }
