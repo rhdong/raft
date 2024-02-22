@@ -141,10 +141,10 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
 
 
     while (offset < num_cols) {
-      index_t bitmap_idx = (s_bit + offset) / BITS_PER_BITMAP;
+      index_t bitmap_idx = lane_id + (s_bit + offset) / BITS_PER_BITMAP;
       bitmap_t l_bitmap = bitmap_t(0);
 
-      if(offset + lane_id * BITS_PER_BITMAP < e_bit) {
+      if(bitmap_idx * BITS_PER_BITMAP < e_bit) {
         l_bitmap  = bitmap[bitmap_idx];
       }
 
