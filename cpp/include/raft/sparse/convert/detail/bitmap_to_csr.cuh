@@ -109,10 +109,10 @@ RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(cons
         l_bitmap >>= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
       }
 
-      auto l_sum = __reduce_add_sync(static_cast<index_t>(raft::detail::popc(l_bitmap)));
+      auto l_sum = __reduce_add_sync(0xffffffff, static_cast<index_t>(raft::detail::popc(l_bitmap)));
 
       if(lane_id == 0) {
-        atomicAdd(nnz_per_row + row, static_cast<nnz_t>(l_sum));
+        *(nnz_per_row + row) += static_cast<nnz_t>(l_sum);
       }
       offset += BITS_PER_BITMAP * warpSize;
     }
