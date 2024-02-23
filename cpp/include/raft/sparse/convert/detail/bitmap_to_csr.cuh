@@ -66,7 +66,7 @@ RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(cons
         l_bitmap >>= (sizeof(bitmap_t) * 8 - (end_bit - start));
         delta = end_bit - offset - start;
       }
-      atomicAdd(nnz_per_row + row, static_cast<nnz_t>(raft::detail::popc(l_bitmap)));
+      atomicAdd_block(nnz_per_row + row, static_cast<nnz_t>(raft::detail::popc(l_bitmap)));
       offset += delta;
     }
   }
