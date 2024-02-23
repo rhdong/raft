@@ -164,9 +164,9 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
         if(l_bitmap & (ONE << i)) {
           indices[indptr[row] + g_sum + l_sum] = offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP) + i;
           l_sum++;
-          printf("row=%d, lane_id=%d, indptr[row]=%d, g_sum=%d, l_sum=%d, offset=%d, i=%d, l_bitmap=%d, s_bit=%d, r=%d\n",
-                 row, lane_id, indptr[row], g_sum, l_sum, offset, i, l_bitmap, s_bit,
-                 offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP) + i);
+//           printf("row=%d, lane_id=%d, indptr[row]=%d, g_sum=%d, l_sum=%d, offset=%d, i=%d, l_bitmap=%d, s_bit=%d, r=%d\n",
+//                  row, lane_id, indptr[row], g_sum, l_sum, offset, i, l_bitmap, s_bit,
+//                  offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP) + i);
         }
       }
       offset += BITS_PER_BITMAP * warpSize;
