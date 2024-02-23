@@ -208,11 +208,11 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
         l_bitmap >>= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
       }
 
-      index_t l_sum = warp_exclusive(static_cast<index_t>(raft::detail::popc(l_bitmap)));
+      index_t l_sum = g_sum + warp_exclusive(static_cast<index_t>(raft::detail::popc(l_bitmap)));
 
       for (int i = 0; i < BITS_PER_BITMAP; i++) {
         if(l_bitmap & (ONE << i)) {
-          indices[indptr_row + g_sum + l_sum] = offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP) + i;
+          indices[indptr_row + l_sum] = offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP) + i;
           l_sum++;
 //           printf("row=%d, lane_id=%d, indptr[row]=%d, g_sum=%d, l_sum=%d, offset=%d, i=%d, l_bitmap=%d, s_bit=%d, r=%d\n",
 //                  row, lane_id, indptr[row], g_sum, l_sum, offset, i, l_bitmap, s_bit,
@@ -220,7 +220,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
         }
       }
       offset += BITS_PER_BITMAP * warpSize;
-      g_sum = __shfl_sync(0xffffffff, g_sum + l_sum, warpSize - 1);
+      g_sum = __shfl_sync(0xffffffff, l_sum, warpSize - 1);
     }
   }
 }
