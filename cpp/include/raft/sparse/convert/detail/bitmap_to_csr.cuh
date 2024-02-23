@@ -38,7 +38,40 @@ namespace convert {
 namespace detail {
 
 // Threads per block in calc_nnz_by_rows_kernel.
-static const constexpr int calc_nnz_by_rows_tpb = 256;
+static const constexpr int calc_nnz_by_rows_tpb = 32;
+
+// template <typename bitmap_t, typename index_t, typename nnz_t>
+// RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(const bitmap_t* bitmap,
+//                                                                             index_t num_rows,
+//                                                                             index_t num_cols,
+//                                                                             index_t bitmap_num,
+//                                                                             nnz_t* nnz_per_row)
+// {
+//   index_t thread_idx = threadIdx.x + blockDim.x * blockIdx.x;
+//   for (index_t idx = thread_idx; idx < bitmap_num; idx += blockDim.x * gridDim.x) {
+//     index_t start  = idx * sizeof(bitmap_t) * 8;
+//     index_t offset = 0;
+//
+//     while (offset < sizeof(bitmap_t) * 8) {
+//       index_t row   = (start + offset) / num_cols;
+//       bitmap_t l_bitmap = bitmap[idx];
+//
+//       index_t delta = min(static_cast<index_t>(sizeof(bitmap_t) * 8) - offset, num_cols);
+//
+//       l_bitmap >>= offset;
+//       l_bitmap <<= offset;
+//       index_t end_bit = num_cols * (row + 1);
+//       if (start + offset + delta >= end_bit) {
+//         l_bitmap <<= (sizeof(bitmap_t) * 8 - (end_bit - start));
+//         l_bitmap >>= (sizeof(bitmap_t) * 8 - (end_bit - start));
+//         delta = end_bit - offset - start;
+//       }
+//       atomicAdd(nnz_per_row + row, static_cast<nnz_t>(raft::detail::popc(l_bitmap)));
+//       offset += delta;
+//     }
+//   }
+// }
+
 
 template <typename bitmap_t, typename index_t, typename nnz_t>
 RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(const bitmap_t* bitmap,
@@ -47,28 +80,41 @@ RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(cons
                                                                             index_t bitmap_num,
                                                                             nnz_t* nnz_per_row)
 {
-  index_t thread_idx = threadIdx.x + blockDim.x * blockIdx.x;
-  for (index_t idx = thread_idx; idx < bitmap_num; idx += blockDim.x * gridDim.x) {
-    index_t start  = idx * sizeof(bitmap_t) * 8;
+  constexpr bitmap_t FULL_MASK      = ~bitmap_t(0u);
+  constexpr bitmap_t ONE            = bitmap_t(1u);
+  constexpr index_t BITS_PER_BITMAP = sizeof(bitmap_t) * 8;
+
+  int lane_id = threadIdx.x & 0x1f;
+
+  for (index_t row = blockIdx.x; row < num_rows; row += gridDim.x) {
     index_t offset = 0;
+    index_t s_bit  = row * num_cols;
+    index_t e_bit  = s_bit + num_cols;
 
-    while (offset < sizeof(bitmap_t) * 8) {
-      index_t row   = (start + offset) / num_cols;
-      bitmap_t l_bitmap = bitmap[idx];
+    while (offset < num_cols) {
+      index_t bitmap_idx = lane_id + (s_bit + offset) / BITS_PER_BITMAP;
+      bitmap_t l_bitmap = bitmap_t(0);
 
-      index_t delta = min(static_cast<index_t>(sizeof(bitmap_t) * 8) - offset, num_cols);
-
-      l_bitmap >>= offset;
-      l_bitmap <<= offset;
-      index_t end_bit = num_cols * (row + 1);
-      if (start + offset + delta >= end_bit) {
-        l_bitmap <<= (sizeof(bitmap_t) * 8 - (end_bit - start));
-        l_bitmap >>= (sizeof(bitmap_t) * 8 - (end_bit - start));
-        delta = end_bit - offset - start;
+      if(bitmap_idx * BITS_PER_BITMAP < e_bit) {
+        l_bitmap  = bitmap[bitmap_idx];
       }
-//       atomicAdd_block(nnz_per_row + row, static_cast<nnz_t>(raft::detail::popc(l_bitmap)));
-      *(nnz_per_row + row) += static_cast<nnz_t>(raft::detail::popc(l_bitmap));
-      offset += delta;
+
+      if (s_bit > bitmap_idx * BITS_PER_BITMAP) {
+        l_bitmap >>= (s_bit - bitmap_idx * BITS_PER_BITMAP);
+        l_bitmap <<= (s_bit - bitmap_idx * BITS_PER_BITMAP);
+      }
+
+      if ((bitmap_idx + 1) * BITS_PER_BITMAP > e_bit) {
+        l_bitmap <<= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
+        l_bitmap >>= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
+      }
+
+      auto l_sum = __reduce_add_sync(static_cast<index_t>(raft::detail::popc(l_bitmap)));
+
+      if(lane_id == 0) {
+        atomicAdd(nnz_per_row + row, static_cast<nnz_t>(l_sum));
+      }
+      offset += BITS_PER_BITMAP * warpSize;
     }
   }
 }
