@@ -193,6 +193,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
     while (offset < num_cols) {
       index_t bitmap_idx = lane_id + (s_bit + offset) / BITS_PER_BITMAP;
       bitmap_t l_bitmap = bitmap_t(0);
+      index_t l_offset = offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP);
 
       if(bitmap_idx * BITS_PER_BITMAP < e_bit) {
         l_bitmap  = bitmap[bitmap_idx];
@@ -212,7 +213,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
 
       for (int i = 0; i < BITS_PER_BITMAP; i++) {
         if(l_bitmap & (ONE << i)) {
-          indices[indptr_row + l_sum] = offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP) + i;
+          indices[indptr_row + l_sum] = l_offset + i;
           l_sum++;
 //           printf("row=%d, lane_id=%d, indptr[row]=%d, g_sum=%d, l_sum=%d, offset=%d, i=%d, l_bitmap=%d, s_bit=%d, r=%d\n",
 //                  row, lane_id, indptr[row], g_sum, l_sum, offset, i, l_bitmap, s_bit,
