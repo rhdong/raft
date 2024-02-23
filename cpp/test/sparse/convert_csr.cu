@@ -321,17 +321,7 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
       std::sort(cols1.begin(), cols1.end());
       std::sort(cols2.begin(), cols2.end());
 
-      if (cols1 != cols2) {
-//         for(auto c: cols1){
-//           std::cout << c << "-";
-//         }
-//         std::cout << std::endl;
-//         for(auto c: cols2){
-//           std::cout << c << "=";
-//         }
-//         std::cout << std::endl;
-        return false;
-      }
+      if (cols1 != cols2) { return false; }
     }
 
     return true;
@@ -342,17 +332,6 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
     index_t element = raft::ceildiv(params.n_rows * params.n_cols, index_t(sizeof(bitmap_t) * 8));
     std::vector<bitmap_t> bitmap_h(element);
     nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, bitmap_h);
-
-    std::cout << "nnz: " << nnz << std::endl;
-//     for(int r = 0; r < params.n_rows; r++){
-//       for(int c = 0; c < params.n_cols; c++){
-//         index_t idx = (r * params.n_cols + c) / (sizeof(bitmap_t) * 8);
-//         index_t bit = (r * params.n_cols + c) - idx * (sizeof(bitmap_t) * 8);
-//
-//         std::cout << ((bitmap_h[idx] & (index_t(1) << bit)) ? 1 : 0) << "+";
-//       }
-//       std::cout << std::endl;
-//     }
 
     std::vector<index_t> indices_h(nnz);
     std::vector<index_t> indptr_h(params.n_rows + 1);
@@ -426,8 +405,8 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
 using BitmapToCSRTestI = BitmapToCSRTest<uint32_t, int>;
 TEST_P(BitmapToCSRTestI, Result) { Run(); }
 
-// using BitmapToCSRTestL = BitmapToCSRTest<uint32_t, int64_t>;
-// TEST_P(BitmapToCSRTestL, Result) { Run(); }
+using BitmapToCSRTestL = BitmapToCSRTest<uint32_t, int64_t>;
+TEST_P(BitmapToCSRTestL, Result) { Run(); }
 
 template <typename index_t>
 const std::vector<BitmapToCSRInputs<index_t>> bitmaptocsr_inputs = {
@@ -442,15 +421,15 @@ const std::vector<BitmapToCSRInputs<index_t>> bitmaptocsr_inputs = {
   {17, 16, 0.3},             // Check peeling-remainder
   {18, 16, 0.3},             // Check peeling-remainder
   {32 + 9, 33, 0.2},         // Check peeling-remainder
-  {2, 33, 0.2},         // Check peeling-remainder
+  {2, 33, 0.2},              // Check peeling-remainder
 };
 
 INSTANTIATE_TEST_CASE_P(SparseConvertCSRTest,
                         BitmapToCSRTestI,
                         ::testing::ValuesIn(bitmaptocsr_inputs<int>));
-// INSTANTIATE_TEST_CASE_P(SparseConvertCSRTest,
-//                         BitmapToCSRTestL,
-//                         ::testing::ValuesIn(bitmaptocsr_inputs<int64_t>));
+INSTANTIATE_TEST_CASE_P(SparseConvertCSRTest,
+                        BitmapToCSRTestL,
+                        ::testing::ValuesIn(bitmaptocsr_inputs<int64_t>));
 
 }  // namespace sparse
 }  // namespace raft
