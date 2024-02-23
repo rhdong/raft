@@ -123,6 +123,15 @@ void bitmap_to_csr(raft::resources const& handle,
                    raft::device_csr_matrix_view<value_t, index_t, index_t, nnz_t> csr)
 {
   auto csr_view = csr.structure_view();
+
+  RAFT_EXPECTS(bitmap.get_n_rows() == csr_view.get_n_rows(),
+               "Number of rows in bitmap must be equal to "
+               "number of rows in csr");
+
+  RAFT_EXPECTS(bitmap.get_n_cols() == csr_view.get_n_cols(),
+               "Number of columns in bitmap must be equal to "
+               "number of columns in csr");
+
   detail::bitmap_to_csr(handle,
                         bitmap.data(),
                         csr_view.get_n_rows(),
