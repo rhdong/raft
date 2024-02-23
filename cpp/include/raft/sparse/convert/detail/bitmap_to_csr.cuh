@@ -117,7 +117,7 @@ RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(cons
     l_sum = __reduce_add_sync(0xffffffff, l_sum);
 
     if(lane_id == 0) {
-      atomicAdd(nnz_per_row + row, static_cast<nnz_t>(l_sum));
+      *(nnz_per_row + row) += static_cast<nnz_t>(l_sum);
     }
   }
 }
