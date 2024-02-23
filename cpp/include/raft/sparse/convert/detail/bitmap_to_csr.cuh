@@ -66,7 +66,7 @@ RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(cons
         mask >>= (sizeof(bitmap_t) * 8 - (end_bit - start));
         delta = end_bit - offset - start;
       }
-      atomicAdd(nnz_per_row + row, static_cast<nnz_t>(raft::detail::popc(bitmap[idx] & mask)));
+      atomicAdd(nnz_per_row + row, static_cast<nnz_t>(__popc(bitmap[idx] & mask)));
       offset += delta;
     }
   }
@@ -158,7 +158,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
         l_bitmap >>= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
       }
 
-      index_t l_sum = warp_exclusive(static_cast<index_t>(raft::detail::popc(l_bitmap)));
+      index_t l_sum = warp_exclusive(static_cast<index_t>(__popc(l_bitmap)));
 
       for (int i = 0; i < BITS_PER_BITMAP; i++) {
         if(l_bitmap & (ONE << i)) {
