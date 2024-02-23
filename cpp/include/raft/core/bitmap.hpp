@@ -115,6 +115,14 @@ struct bitmap_view : public bitset_view<bitmap_t, index_t> {
    */
   inline index_t get_n_cols() const { return cols_; }
 
+  /**
+   * @brief Returns the number of bits set to 1.
+   *
+   * @param res RAFT resources
+   * @return index_t Number of bits set to 1
+   */
+  auto get_nnz(const raft::resources& res) -> index_t { return count(res); }
+
  private:
   index_t rows_;
   index_t cols_;
