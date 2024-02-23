@@ -442,7 +442,7 @@ const std::vector<BitmapToCSRInputs<index_t>> bitmaptocsr_inputs = {
 //   {17, 16, 0.3},             // Check peeling-remainder
 //   {18, 16, 0.3},             // Check peeling-remainder
 //   {32 + 9, 33, 0.2},         // Check peeling-remainder
-  {2, 33, 0.2},         // Check peeling-remainder
+  {1, 33, 0.2},         // Check peeling-remainder
 };
 
 INSTANTIATE_TEST_CASE_P(SparseConvertCSRTest,
