@@ -38,7 +38,7 @@ namespace convert {
 namespace detail {
 
 // Threads per block in calc_nnz_by_rows_kernel.
-static const constexpr int calc_nnz_by_rows_tpb = 32;
+static const constexpr int calc_nnz_by_rows_tpb = 256;
 
 // template <typename bitmap_t, typename index_t, typename nnz_t>
 // RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(const bitmap_t* bitmap,
@@ -117,7 +117,7 @@ RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(cons
     l_sum = __reduce_add_sync(0xffffffff, l_sum);
 
     if(lane_id == 0) {
-      atomicAdd(nnz_per_row + row, static_cast<nnz_t>(l_sum));
+      atomicAdd_block(nnz_per_row + row, static_cast<nnz_t>(l_sum));
     }
   }
 }
@@ -149,6 +149,10 @@ void calc_nnz_by_rows(raft::resources const& handle,
   RAFT_CUDA_TRY(cudaPeekAtLastError());
 }
 
+
+// Threads per block in fill_indices_by_rows_kernel.
+static const constexpr int fill_indices_by_rows_tpb = 32;
+
 template <typename value_t>
 __device__ inline value_t warp_exclusive(value_t value)
 {
@@ -164,9 +168,6 @@ __device__ inline value_t warp_exclusive(value_t value)
   }
   return sum;
 }
-
-// Threads per block in fill_indices_by_rows_kernel.
-static const constexpr int fill_indices_by_rows_tpb = 32;
 
 template <typename bitmap_t, typename index_t>
 RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
