@@ -51,22 +51,23 @@ RAFT_KERNEL __launch_bounds__(calc_nnz_by_rows_tpb) calc_nnz_by_rows_kernel(cons
   for (index_t idx = thread_idx; idx < bitmap_num; idx += blockDim.x * gridDim.x) {
     index_t start  = idx * sizeof(bitmap_t) * 8;
     index_t offset = 0;
-    //     printf("bitmap_num=%d\n", bitmap_num);
+
     while (offset < sizeof(bitmap_t) * 8) {
-      bitmap_t mask = ~bitmap_t(0u);
+//       bitmap_t mask = ~bitmap_t(0u);
       index_t row   = (start + offset) / num_cols;
+      bitmap_t l_bitmap = bitmap[idx];
 
       index_t delta = min(static_cast<index_t>(sizeof(bitmap_t) * 8) - offset, num_cols);
 
-      mask >>= offset;
-      mask <<= offset;
+      l_bitmap >>= offset;
+      l_bitmap <<= offset;
       index_t end_bit = num_cols * (row + 1);
       if (start + offset + delta >= end_bit) {
-        mask <<= (sizeof(bitmap_t) * 8 - (end_bit - start));
-        mask >>= (sizeof(bitmap_t) * 8 - (end_bit - start));
+        l_bitmap <<= (sizeof(bitmap_t) * 8 - (end_bit - start));
+        l_bitmap >>= (sizeof(bitmap_t) * 8 - (end_bit - start));
         delta = end_bit - offset - start;
       }
-      atomicAdd(nnz_per_row + row, static_cast<nnz_t>(raft::detail::popc(bitmap[idx] & mask)));
+      atomicAdd(nnz_per_row + row, static_cast<nnz_t>(raft::detail::popc(bitmap[idx])));
       offset += delta;
     }
   }
@@ -302,9 +303,9 @@ void bitmap_to_csr(raft::resources const& handle,
 
   RAFT_CUDA_TRY(cudaMemsetAsync(indptr, 0, (num_rows + 1) * sizeof(index_t), stream));
 
-//   calc_nnz_by_rows(handle, bitmap, num_rows, num_cols, indptr);
+  calc_nnz_by_rows(handle, bitmap, num_rows, num_cols, indptr);
   thrust::exclusive_scan(thrust_policy, indptr, indptr + num_rows + 1, indptr);
-//   fill_indices_by_rows(handle, bitmap, indptr, num_rows, num_cols, indices);
+  fill_indices_by_rows(handle, bitmap, indptr, num_rows, num_cols, indices);
 }
 
 };  // end NAMESPACE detail
