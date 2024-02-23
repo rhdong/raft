@@ -302,7 +302,7 @@ void bitmap_to_csr(raft::resources const& handle,
 
   RAFT_CUDA_TRY(cudaMemsetAsync(indptr, 0, (num_rows + 1) * sizeof(index_t), stream));
 
-  calc_nnz_by_rows(handle, bitmap, num_rows, num_cols, indptr);
+//   calc_nnz_by_rows(handle, bitmap, num_rows, num_cols, indptr);
   thrust::exclusive_scan(thrust_policy, indptr, indptr + num_rows + 1, indptr);
 //   fill_indices_by_rows(handle, bitmap, indptr, num_rows, num_cols, indices);
 }
