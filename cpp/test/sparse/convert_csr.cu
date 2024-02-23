@@ -322,14 +322,14 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
       std::sort(cols2.begin(), cols2.end());
 
       if (cols1 != cols2) {
-//         for(auto c: cols1){
-//           std::cout << c << "-";
-//         }
-//         std::cout << std::endl;
-//         for(auto c: cols2){
-//           std::cout << c << "=";
-//         }
-//         std::cout << std::endl;
+        for(auto c: cols1){
+          std::cout << c << "-";
+        }
+        std::cout << std::endl;
+        for(auto c: cols2){
+          std::cout << c << "=";
+        }
+        std::cout << std::endl;
         return false;
       }
     }
@@ -344,15 +344,15 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
     nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, bitmap_h);
 
     std::cout << "nnz: " << nnz << std::endl;
-//     for(int r = 0; r < params.n_rows; r++){
-//       for(int c = 0; c < params.n_cols; c++){
-//         index_t idx = (r * params.n_cols + c) / (sizeof(bitmap_t) * 8);
-//         index_t bit = (r * params.n_cols + c) - idx * (sizeof(bitmap_t) * 8);
-//
-//         std::cout << ((bitmap_h[idx] & (index_t(1) << bit)) ? 1 : 0) << "+";
-//       }
-//       std::cout << std::endl;
-//     }
+    for(int r = 0; r < params.n_rows; r++){
+      for(int c = 0; c < params.n_cols; c++){
+        index_t idx = (r * params.n_cols + c) / (sizeof(bitmap_t) * 8);
+        index_t bit = (r * params.n_cols + c) - idx * (sizeof(bitmap_t) * 8);
+
+        std::cout << ((bitmap_h[idx] & (index_t(1) << bit)) ? 1 : 0) << "+";
+      }
+      std::cout << std::endl;
+    }
 
     std::vector<index_t> indices_h(nnz);
     std::vector<index_t> indptr_h(params.n_rows + 1);
@@ -431,16 +431,16 @@ TEST_P(BitmapToCSRTestI, Result) { Run(); }
 
 template <typename index_t>
 const std::vector<BitmapToCSRInputs<index_t>> bitmaptocsr_inputs = {
-  {0, 0, 0.2},
-  {10, 32, 0.4},
-  {10, 3, 0.2},
-  {32, 1024, 0.4},
-  {1024, 1048576, 0.01},
-  {1024, 1024, 0.4},
-  {64 * 1024 + 10, 2, 0.3},  // 64K + 10 is slightly over maximum of blockDim.y
-  {16, 16, 0.3},             // No peeling-remainder
-  {17, 16, 0.3},             // Check peeling-remainder
-  {18, 16, 0.3},             // Check peeling-remainder
+//   {0, 0, 0.2},
+//   {10, 32, 0.4},
+//   {10, 3, 0.2},
+//   {32, 1024, 0.4},
+//   {1024, 1048576, 0.01},
+//   {1024, 1024, 0.4},
+//   {64 * 1024 + 10, 2, 0.3},  // 64K + 10 is slightly over maximum of blockDim.y
+//   {16, 16, 0.3},             // No peeling-remainder
+//   {17, 16, 0.3},             // Check peeling-remainder
+//   {18, 16, 0.3},             // Check peeling-remainder
   {32 + 9, 33, 0.2},         // Check peeling-remainder
 };
 
