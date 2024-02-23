@@ -211,7 +211,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
 
       for (int i = 0; i < BITS_PER_BITMAP; i++) {
         if(l_bitmap & (ONE << i)) {
-          indices[indptr[row] + g_sum + l_sum] = offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP) + i;
+          // indices[indptr[row] + g_sum + l_sum] = offset  + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP) + i;
           l_sum++;
 //           printf("row=%d, lane_id=%d, indptr[row]=%d, g_sum=%d, l_sum=%d, offset=%d, i=%d, l_bitmap=%d, s_bit=%d, r=%d\n",
 //                  row, lane_id, indptr[row], g_sum, l_sum, offset, i, l_bitmap, s_bit,
@@ -353,7 +353,7 @@ void bitmap_to_csr(raft::resources const& handle,
 
   calc_nnz_by_rows(handle, bitmap, num_rows, num_cols, indptr);
   thrust::exclusive_scan(thrust_policy, indptr, indptr + num_rows + 1, indptr);
-//   fill_indices_by_rows(handle, bitmap, indptr, num_rows, num_cols, indices);
+  fill_indices_by_rows(handle, bitmap, indptr, num_rows, num_cols, indices);
 }
 
 };  // end NAMESPACE detail
