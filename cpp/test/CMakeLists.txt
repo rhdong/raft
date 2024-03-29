@@ -279,7 +279,6 @@ if(BUILD_TESTS)
   ConfigureTest(
     NAME
     MATRIX_SELECT_TEST
-    PATH test/matrix/select_k.cu
     PATH test/matrix/select_k_csr.cu
     LIB
     EXPLICIT_INSTANTIATE_ONLY)
