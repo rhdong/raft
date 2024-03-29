@@ -1124,7 +1124,7 @@ RAFT_KERNEL radix_topk_one_block_kernel(const T* in,
 
   if constexpr (!len_or_indptr) {
     if (l_len <= k) {
-      copy_in(out, in, l_len, k, select_min);
+      copy_in_val(out, in, l_len, k, select_min);
       copy_in_idx(out_idx, in_idx, l_len);
       __syncthreads();
       return;
