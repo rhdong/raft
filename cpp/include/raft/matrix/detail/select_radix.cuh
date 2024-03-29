@@ -589,7 +589,6 @@ _RAFT_DEVICE _RAFT_FORCEINLINE void copy_in_val(
   S stride            = S(blockDim.x);
   const T default_val = select_min ? upper_bound<T>() : lower_bound<T>();
   for (S i = idx; i < k; i += stride) {
-    // printf("idx = %d, stride=%d, i =%d, len=%d\n", int(idx), int(stride), int(i), int(len));
     dest[i] = i < len ? src[i] : default_val;
   }
 }
