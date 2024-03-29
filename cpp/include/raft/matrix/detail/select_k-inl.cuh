@@ -448,13 +448,13 @@ void select_k(raft::resources const& handle,
           handle,
           in_val.get_elements().data(),
           (in_idx.has_value() ? in_idx->data_handle() : csr_view.get_indices().data()),
-          indptr,
           batch_size,
           len,
           k,
           out_val.data_handle(),
           out_idx.data_handle(),
-          select_min);
+          select_min,
+          indptr);
     case SelectAlgo::kWarpDistributedShm:
       return detail::select::warpsort::
         select_k_impl<T, IdxT, detail::select::warpsort::warp_sort_distributed_ext>(
