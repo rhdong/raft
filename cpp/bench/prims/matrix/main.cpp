@@ -19,7 +19,7 @@
 #include <cstring>
 
 namespace raft::matrix {
-void add_select_k_dataset_benchmarks();
+//void add_select_k_dataset_benchmarks();
 }
 
 int main(int argc, char** argv)
@@ -27,7 +27,7 @@ int main(int argc, char** argv)
   // if we're passed a 'select_k_dataset' flag, add in extra benchmarks
   for (int i = 1; i < argc; ++i) {
     if (strcmp(argv[i], "--select_k_dataset") == 0) {
-      raft::matrix::add_select_k_dataset_benchmarks();
+      //raft::matrix::add_select_k_dataset_benchmarks();
 
       // pop off the cmdline argument from argc/argv
       for (int j = i; j < argc - 1; ++j)
