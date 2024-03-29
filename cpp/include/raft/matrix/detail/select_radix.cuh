@@ -389,8 +389,8 @@ _RAFT_DEVICE void choose_bucket(Counter<T, IdxT>* counter,
   for (int i = threadIdx.x; i < num_buckets; i += blockDim.x) {
     IdxT prev = (i == 0) ? 0 : histogram[i - 1];
     IdxT cur  = histogram[i];
-    //  one and only one thread will satisfy this condition, so counter is written by only one
-    //  thread
+
+    // one and only one thread will satisfy this condition, so counter is written by only one thread
     if (prev < k && cur >= k) {
       counter->k   = k - prev;    // how many values still are there to find
       counter->len = cur - prev;  // number of values in next pass
