@@ -121,6 +121,7 @@ struct bitmap_view : public bitset_view<bitmap_t, index_t> {
  private:
   index_t rows_;
   index_t cols_;
+  bitmap_t* bitmap_ptr_;
 };
 
 /** @} */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION.
+ * Copyright (c) 2020-2024, NVIDIA CORPORATION.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <raft/core/bitmap.cuh>
 #include <raft/core/copy.cuh>
 #include <raft/core/device_mdspan.hpp>
 #include <raft/core/resource/cuda_stream.hpp>
@@ -449,5 +450,33 @@ void search(raft::resources const& res,
   raft::neighbors::detail::brute_force_search<T, IdxT>(res, idx, queries, neighbors, distances);
 }
 
+/**
+ * @brief Brute Force search with filter using the constructed index.
+ *
+ * @tparam       T data element type
+ * @tparam       IdxT type of the indices
+ * @tparam       bitmap_t       The data type of the elements in the filter of bitmap view.
+ *
+ * @param[in] res raft resources
+ * @param[in] params configure the search
+ * @param[in] idx brute force index
+ * @param[in] queries a device matrix view to a row-major matrix [n_queries, index->dim()]
+ * @param[out] neighbors a device matrix view to the indices of the neighbors in the source dataset
+ * [n_queries, k]
+ * @param[out] distances a device matrix view to the distances to the selected neighbors [n_queries,
+ * k]
+ */
+template <typename T, typename IdxT, typename bitmap_t>
+void search_with_filtering(raft::resources const& res,
+                           search_params const& params,
+                           const index<T>& idx,
+                           raft::device_matrix_view<const T, int64_t, row_major> queries,
+                           raft::core::bitmap_view<const bitmap_t, int64_t> filter,
+                           raft::device_matrix_view<IdxT, int64_t, row_major> neighbors,
+                           raft::device_matrix_view<T, int64_t, row_major> distances)
+{
+  raft::neighbors::detail::brute_force_search<T, IdxT, bitmap_t>(
+    res, idx, queries, filter, neighbors, distances);
+}
 /** @} */  // end group brute_force_knn
 }  // namespace raft::neighbors::brute_force

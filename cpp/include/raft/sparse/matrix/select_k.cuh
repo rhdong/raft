@@ -16,6 +16,7 @@
 
 #pragma once
 
+
 #include <raft/core/device_csr_matrix.hpp>
 #include <raft/core/device_mdspan.hpp>
 #include <raft/core/nvtx.hpp>
@@ -26,7 +27,9 @@
 
 #include <optional>
 
-namespace raft::sparse::matrix {
+namespace raft {
+namespace sparse {
+namespace matrix {
 
 using SelectAlgo = raft::matrix::SelectAlgo;
 
@@ -69,19 +72,21 @@ using SelectAlgo = raft::matrix::SelectAlgo;
  * @param[in] algo
  *   the selection algorithm to use
  */
+
 template <typename T, typename IdxT>
 void select_k(raft::resources const& handle,
-              raft::device_csr_matrix_view<const T, IdxT, IdxT, IdxT> in_val,
-              std::optional<raft::device_vector_view<const IdxT, IdxT>> in_idx,
-              raft::device_matrix_view<T, IdxT, raft::row_major> out_val,
-              raft::device_matrix_view<IdxT, IdxT, raft::row_major> out_idx,
+              raft::device_csr_matrix_view<const T, int64_t, int64_t, int64_t> in_val,
+              std::optional<raft::device_vector_view<const IdxT, int64_t>> in_idx,
+              raft::device_matrix_view<T, int64_t, raft::row_major> out_val,
+              raft::device_matrix_view<IdxT, int64_t, raft::row_major> out_idx,
               bool select_min,
               bool sorted     = false,
               SelectAlgo algo = SelectAlgo::kAuto)
 {
-  return detail::select_k<T, IdxT>(
-    handle, in_val, in_idx, out_val, out_idx, select_min, sorted, algo);
+  return raft::sparse::matrix::detail::select_k<T, IdxT>(sorted);
 }
 /** @} */  // end of group select_k
 
-}  // namespace raft::sparse::matrix
+}  // namespace matrix
+}  // namespace sparse
+}  // namespace raft
