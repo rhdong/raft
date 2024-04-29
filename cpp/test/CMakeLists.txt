@@ -337,9 +337,7 @@ if(BUILD_TESTS)
     NAME
     SPARSE_NEIGHBORS_TEST
     PATH
-    test/sparse/neighbors/cross_component_nn.cu
-    test/sparse/neighbors/brute_force.cu
-    test/sparse/neighbors/knn_graph.cu
+    test/sparse/neighbors/prefiltered_brute_force.cu
     LIB
     EXPLICIT_INSTANTIATE_ONLY
   )

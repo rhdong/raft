@@ -574,10 +574,8 @@ void brute_force_search(
   IdxT n_rows = idx.dataset().extent(0);
   IdxT n_cols = queries.extent(0);
 
-  std::vector<T*> dataset    = {const_cast<T*>(idx.dataset().data_handle())};
-  std::vector<int64_t> sizes = {idx.dataset().extent(0)};
-  std::vector<T*> norms;
-  if (idx.has_norms()) { norms.push_back(const_cast<T*>(idx.norms().data_handle())); }
+  T* norms = nullptr;
+  if (idx.has_norms()) { norms = const_cast<T*>(idx.norms().data_handle()); }
 
   // calc nnz
   IdxT nnz_h = 0;
