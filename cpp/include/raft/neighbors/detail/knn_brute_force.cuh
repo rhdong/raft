@@ -600,7 +600,7 @@ void brute_force_search(
   auto idx_view =
     raft::make_device_matrix_view<const T, IdxT>(idx.dataset().data_handle(), n_rows, k);
 
-  // sddmm
+  // calc dot
   T alpha = static_cast<T>(1.0f);
   T beta  = static_cast<T>(0.0f);
   raft::sparse::linalg::sddmm(res,

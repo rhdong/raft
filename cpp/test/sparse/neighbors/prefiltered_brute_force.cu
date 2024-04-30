@@ -25,7 +25,7 @@
 #include <raft/matrix/copy.cuh>
 #include <raft/random/make_blobs.cuh>
 #include <raft/random/rng_state.hpp>
-#include <raft/sparse/matrix/select_k.cuh>
+#include <raft/sparse/neighbors/brute_force.cuh>
 #include <raft/util/cuda_utils.cuh>
 
 #include <gtest/gtest.h>
@@ -46,11 +46,11 @@ template <typename index_t>
 struct SelectKCsrInputs {
   index_t n_rows;
   index_t n_cols;
+  index_t dim;
   index_t top_k;
   float sparsity;
-  bool select_min;
-  bool customized_indices;
   raft::distance::DistanceType metric = raft::distance::DistanceType::L2SqrtUnexpanded;
+  bool select_min                     = true;
 };
 
 template <typename T>
@@ -76,36 +76,39 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
   SelectKCsrTest()
     : stream(resource::get_cuda_stream(handle)),
       params(::testing::TestWithParam<SelectKCsrInputs<index_t>>::GetParam()),
-      indices_d(0, stream),
-      customized_indices_d(0, stream),
-      indptr_d(0, stream),
-      values_d(0, stream),
-      dst_values_d(0, stream),
-      dst_values_expected_d(0, stream),
-      dst_indices_d(0, stream),
-      dst_indices_expected_d(0, stream)
+      filter_d(0, stream),
+      in_val_d(0, stream),
+      in_idx_d(0, stream),
+      out_val_d(0, stream),
+      out_val_expected_d(0, stream),
+      out_idx_d(0, stream),
+      out_idx_expected_d(0, stream)
   {
   }
 
  protected:
-  index_t create_sparse_matrix(index_t m, index_t n, value_t sparsity, std::vector<bool>& matrix)
+  index_t create_sparse_matrix(index_t m, index_t n, float sparsity, std::vector<bitmap_t>& bitmap)
   {
-    index_t total_elements = static_cast<index_t>(m * n);
-    index_t num_ones       = static_cast<index_t>((total_elements * 1.0f) * sparsity);
-    index_t res            = num_ones;
+    index_t total    = static_cast<index_t>(m * n);
+    index_t num_ones = static_cast<index_t>((total * 1.0f) * sparsity);
+    index_t res      = num_ones;
 
-    for (index_t i = 0; i < total_elements; ++i) {
-      matrix[i] = false;
+    for (auto& item : bitmap) {
+      item = static_cast<bitmap_t>(0);
     }
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis_idx(0, total_elements - 1);
+    std::uniform_int_distribution<index_t> dis(0, total - 1);
 
     while (num_ones > 0) {
-      size_t index = dis_idx(gen);
-      if (matrix[index] == false) {
-        matrix[index] = true;
+      index_t index = dis(gen);
+
+      bitmap_t& element    = bitmap[index / (8 * sizeof(bitmap_t))];
+      index_t bit_position = index % (8 * sizeof(bitmap_t));
+
+      if (((element >> bit_position) & 1) == 0) {
+        element |= (static_cast<index_t>(1) << bit_position);
         num_ones--;
       }
     }
@@ -238,56 +241,73 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     }
   }
 
-  template <typename data_t>
-  std::optional<data_t> get_opt_var(data_t x)
-  {
-    if (params.customized_indices) {
-      return x;
-    } else {
-      return std::nullopt;
-    }
-  }
-
   void SetUp() override
   {
-    std::vector<bool> dense_values_h(params.n_rows * params.n_cols, false);
-    nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, dense_values_h);
+    index_t element = raft::ceildiv(params.n_rows * params.n_cols, index_t(sizeof(bitmap_t) * 8));
+    std::vector<bitmap_t> filter_h(element);
 
-    std::vector<value_t> values_h(nnz);
-    std::vector<index_t> indices_h(nnz);
-    std::vector<index_t> customized_indices_h(nnz);
-    std::vector<index_t> indptr_h(params.n_rows + 1);
+    nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, filter_h);
 
-    cpu_convert_to_csr(dense_values_h, params.n_rows, params.n_cols, indices_h, indptr_h);
+    index_t in_val_size = params.n_rows * params.dim;
+    index_t in_idx_size = params.dim * params.n_cols;
 
-    std::vector<value_t> dst_values_h(params.n_rows * params.top_k,
-                                      std::numeric_limits<value_t>::infinity());
-    std::vector<index_t> dst_indices_h(params.n_rows * params.top_k, static_cast<index_t>(0));
+    std::vector<value_t> in_val_h(in_val_size);
+    std::vector<value_t> in_idx_h(in_idx_size);
 
-    dst_values_d.resize(params.n_rows * params.top_k, stream);
-    dst_indices_d.resize(params.n_rows * params.top_k, stream);
-    values_d.resize(nnz, stream);
+    in_val_d.resize(in_val_size, stream);
+    in_idx_d.resize(in_idx_size, stream);
 
-    update_device(dst_values_d.data(), dst_values_h.data(), dst_values_h.size(), stream);
-    update_device(dst_indices_d.data(), dst_indices_h.data(), dst_indices_h.size(), stream);
+    auto blobs_a_b =
+      raft::make_device_matrix<value_t, index_t>(handle, 1, in_val_size + in_idx_size);
+    auto labels = raft::make_device_vector<index_t, index_t>(handle, 1);
 
-    if (params.customized_indices) {
-      customized_indices_d.resize(nnz, stream);
-      update_device(customized_indices_d.data(),
-                    customized_indices_h.data(),
-                    customized_indices_h.size(),
-                    stream);
-    }
+    raft::random::make_blobs<value_t, index_t>(blobs_a_b.data_handle(),
+                                               labels.data_handle(),
+                                               1,
+                                               in_val_size + in_idx_size,
+                                               1,
+                                               stream,
+                                               false,
+                                               nullptr,
+                                               nullptr,
+                                               value_t(1.0),
+                                               false,
+                                               value_t(-1.0f),
+                                               value_t(1.0f),
+                                               uint64_t(2024));
+
+    raft::copy(in_val_h.data(), blobs_a_b.data_handle(), in_val_size, stream);
+    raft::copy(in_idx_h.data(), blobs_a_b.data_handle() + in_val_size, in_idx_size, stream);
+
+    raft::copy(in_val_d.data(), blobs_a_b.data_handle(), in_val_size, stream);
+    raft::copy(in_idx_d.data(), blobs_a_b.data_handle() + in_val_size, in_idx_size, stream);
 
     resource::sync_stream(handle);
 
-    if (values_h.size()) {
-      random_array(values_h.data(), values_h.size());
-      raft::copy(values_d.data(), values_h.data(), values_h.size(), stream);
-      resource::sync_stream(handle);
-    }
+    std::vector<value_t> values_h(nnz);
+    std::vector<index_t> indices_h(nnz);
+    std::vector<index_t> indptr_h(params.n_rows + 1);
 
-    auto optional_indices_h = get_opt_var(customized_indices_h);
+    filter_d.resize(filter_h.size(), stream);
+    cpu_convert_to_csr(filter_h, params.n_rows, params.n_cols, indices_h, indptr_h);
+
+    cpu_sddmm(in_val_h, in_idx_h, values_h, indices_h, indptr_h, true, true);
+
+    std::vector<value_t> out_val_h(params.n_rows * params.top_k,
+                                   std::numeric_limits<value_t>::infinity());
+    std::vector<index_t> out_idx_h(params.n_rows * params.top_k, static_cast<index_t>(0));
+
+    out_val_d.resize(params.n_rows * params.top_k, stream);
+    out_idx_d.resize(params.n_rows * params.top_k, stream);
+    values_d.resize(nnz, stream);
+
+    update_device(out_val_d.data(), out_val_h.data(), out_val_h.size(), stream);
+    update_device(out_idx_d.data(), out_idx_d.data(), out_idx_d.size(), stream);
+    update_device(filter_d.data(), filter_h.data(), filter_h.size(), stream);
+
+    resource::sync_stream(handle);
+
+    auto optional_indices_h = std::nullopt;
 
     cpu_select_k(indptr_h,
                  indices_h,
@@ -296,58 +316,45 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                  params.n_rows,
                  params.n_cols,
                  params.top_k,
-                 dst_values_h,
-                 dst_indices_h,
+                 out_val_h,
+                 out_idx_d,
                  params.select_min);
 
     indices_d.resize(nnz, stream);
     indptr_d.resize(params.n_rows + 1, stream);
 
-    dst_values_expected_d.resize(params.n_rows * params.top_k, stream);
-    dst_indices_expected_d.resize(params.n_rows * params.top_k, stream);
+    out_val_expected_d.resize(params.n_rows * params.top_k, stream);
+    out_idx_expected_d.resize(params.n_rows * params.top_k, stream);
 
-    update_device(values_d.data(), values_h.data(), values_h.size(), stream);
-    update_device(indices_d.data(), indices_h.data(), indices_h.size(), stream);
-    update_device(indptr_d.data(), indptr_h.data(), indptr_h.size(), stream);
-    update_device(dst_values_expected_d.data(), dst_values_h.data(), dst_values_h.size(), stream);
-    update_device(
-      dst_indices_expected_d.data(), dst_indices_h.data(), dst_indices_h.size(), stream);
+    update_device(out_val_expected_d.data(), out_val_h.data(), out_val_h.size(), stream);
+    update_device(out_idx_expected_d.data(), out_idx_d.data(), out_idx_d.size(), stream);
 
     resource::sync_stream(handle);
   }
 
   void Run()
   {
-    auto in_val_structure = raft::make_device_compressed_structure_view<index_t, index_t, index_t>(
-      indptr_d.data(),
-      indices_d.data(),
-      params.n_rows,
-      params.n_cols,
-      static_cast<index_t>(indices_d.size()));
+    auto in_val_raw =
+      raft::make_device_matrix_view<const index_t, index_t>(in_val_d.data(), params.n_rows, params.dim);
 
-    auto in_val =
-      raft::make_device_csr_matrix_view<const value_t>(values_d.data(), in_val_structure);
-
-    std::optional<raft::device_vector_view<const index_t, index_t>> in_idx;
-
-    in_idx = get_opt_var(
-      raft::make_device_vector_view<const index_t, index_t>(customized_indices_d.data(), nnz));
+    brute_force::index<T> in_val = brute_force::build(handle, in_val_raw, params.metric);
+    std::optional<raft::device_vector_view<const index_t, index_t>> in_idx = std::nullopt;
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
-      dst_values_d.data(), params.n_rows, params.top_k);
+      out_val_d.data(), params.n_rows, params.top_k);
     auto out_idx = raft::make_device_matrix_view<index_t, index_t, raft::row_major>(
-      dst_indices_d.data(), params.n_rows, params.top_k);
+      out_idx_d.data(), params.n_rows, params.top_k);
 
-    raft::sparse::matrix::select_k(
+    raft::sparse::neighbors::search_with_filtering(
       handle, in_val, in_idx, out_val, out_idx, params.select_min, true);
 
-    ASSERT_TRUE(raft::devArrMatch<index_t>(dst_indices_expected_d.data(),
+    ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
                                            out_idx.data_handle(),
                                            params.n_rows * params.top_k,
                                            raft::Compare<index_t>(),
                                            stream));
 
-    ASSERT_TRUE(raft::devArrMatch<value_t>(dst_values_expected_d.data(),
+    ASSERT_TRUE(raft::devArrMatch<value_t>(out_val_expected_d.data(),
                                            out_val.data_handle(),
                                            params.n_rows * params.top_k,
                                            CompareApproxWithInf<value_t>(1e-6f),
@@ -362,16 +369,16 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
   index_t nnz;
 
-  rmm::device_uvector<value_t> values_d;
-  rmm::device_uvector<index_t> indptr_d;
-  rmm::device_uvector<index_t> indices_d;
-  rmm::device_uvector<index_t> customized_indices_d;
+  rmm::device_uvector<bitmap_t> filter_d;
 
-  rmm::device_uvector<value_t> dst_values_d;
-  rmm::device_uvector<value_t> dst_values_expected_d;
+  rmm::device_uvector<value_t> in_val_d;
+  rmm::device_uvector<index_t> in_idx_d;
 
-  rmm::device_uvector<index_t> dst_indices_d;
-  rmm::device_uvector<index_t> dst_indices_expected_d;
+  rmm::device_uvector<value_t> out_val_d;
+  rmm::device_uvector<value_t> out_val_expected_d;
+
+  rmm::device_uvector<index_t> out_idx_d;
+  rmm::device_uvector<index_t> out_idx_expected_d;
 };
 
 using SelectKCsrTest_float_int = SelectKCsrTest<float, int>;
@@ -381,51 +388,12 @@ using SelectKCsrTest_double_int64 = SelectKCsrTest<double, int64_t>;
 TEST_P(SelectKCsrTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
-const std::vector<SelectKCsrInputs<index_t>> selectk_inputs = {
-  {10, 32, 10, 0.0, true, false},
-  {10, 32, 10, 0.0, true, true},
-  {10, 32, 10, 0.01, true, false},  // kWarpImmediate
-  {10, 32, 10, 0.1, true, true},
-  {10, 32, 251, 0.1, true, false},  // kWarpImmediate
-  {10, 32, 251, 0.6, true, true},
-  {1000, 1024 * 100, 1, 0.1, true, false},  // kWarpImmediate
-  {1000, 1024 * 100, 1, 0.2, true, true},
-  {1024, 1024, 258, 0.3, true, false},  // kRadix11bitsExtraPass
-  {1024, 1024, 600, 0.2, true, true},
-  {1024, 1024, 1024, 0.3, true, false},  // kRadix11bitsExtraPass
-  {1024, 1024, 1024, 0.2, true, true},
-  {100, 1024 * 1000, 251, 0.1, true, false},  // kWarpDistributedShm
-  {100, 1024 * 1000, 251, 0.2, true, true},
-  {1024, 1024 * 10, 251, 0.3, true, false},  // kWarpImmediate
-  {1024, 1024 * 10, 251, 0.2, true, true},
-  {1000, 1024 * 20, 1000, 0.2, true, false},  // kRadix11bits
-  {1000, 1024 * 20, 1000, 0.3, true, true},
-  {2048, 1024 * 10, 1000, 0.2, true, false},  // kRadix11bitsExtraPass
-  {2048, 1024 * 10, 1000, 0.3, true, true},
-  {2048, 1024 * 10, 2100, 0.1, true, false},  // kRadix11bitsExtraPass
-  {2048, 1024 * 10, 2100, 0.2, true, true},
-  {10, 32, 10, 0.0, false, false},
-  {10, 32, 10, 0.0, false, true},
-  {10, 32, 10, 0.01, false, false},  // kWarpImmediate
-  {10, 32, 10, 0.1, false, true},
-  {10, 32, 251, 0.1, false, false},  // kWarpImmediate
-  {10, 32, 251, 0.6, false, true},
-  {1000, 1024 * 100, 1, 0.1, false, false},  // kWarpImmediate
-  {1000, 1024 * 100, 1, 0.2, false, true},
-  {1024, 1024, 258, 0.3, false, false},  // kRadix11bitsExtraPass
-  {1024, 1024, 600, 0.2, false, true},
-  {1024, 1024, 1024, 0.3, false, false},  // kRadix11bitsExtraPass
-  {1024, 1024, 1024, 0.2, false, true},
-  {100, 1024 * 1000, 251, 0.1, false, false},  // kWarpDistributedShm
-  {100, 1024 * 1000, 251, 0.2, false, true},
-  {1024, 1024 * 10, 251, 0.3, false, false},  // kWarpImmediate
-  {1024, 1024 * 10, 251, 0.2, false, true},
-  {1000, 1024 * 20, 1000, 0.2, false, false},  // kRadix11bits
-  {1000, 1024 * 20, 1000, 0.3, false, true},
-  {2048, 1024 * 10, 1000, 0.2, false, false},  // kRadix11bitsExtraPass
-  {2048, 1024 * 10, 1000, 0.3, false, true},
-  {2048, 1024 * 10, 2100, 0.1, false, false},  // kRadix11bitsExtraPass
-  {2048, 1024 * 10, 2100, 0.2, false, true}};
+const std::vector<SelectKCsrInputs<index_t>> selectk_inputs = {{10, 32, 20, 10, 0.0, false},
+                                                               {10, 32, 20, 10, 0.0, true},
+                                                               {10, 32, 20, 10, 0.01, false},
+                                                               {10, 32, 20, 10, 0.1, true},
+                                                               {10, 32, 500, 251, 0.1, false},
+                                                               {10, 32, 500, 251, 0.6, true}};
 
 INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
                         SelectKCsrTest_float_int,
