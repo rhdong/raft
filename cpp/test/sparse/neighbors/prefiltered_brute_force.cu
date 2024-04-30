@@ -21,6 +21,7 @@
 #include <raft/core/device_mdspan.hpp>
 #include <raft/core/resource/cuda_stream.hpp>
 #include <raft/core/resources.hpp>
+#include <raft/distance/distance_types.hpp>
 #include <raft/matrix/copy.cuh>
 #include <raft/random/make_blobs.cuh>
 #include <raft/random/rng_state.hpp>
@@ -67,7 +68,7 @@ struct CompareApproxWithInf {
   T eps;
 };
 
-template <typename value_t, typename index_t>
+template <typename value_t, typename index_t, typename bitmap_t = uint32_t>
 class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>> {
  public:
   SelectKCsrTest()
