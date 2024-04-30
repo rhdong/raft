@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "../test_utils.cuh"
+#include "../../test_utils.cuh"
 
 #include <raft/core/device_csr_matrix.hpp>
 #include <raft/core/device_mdarray.hpp>
@@ -109,19 +109,27 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     return res;
   }
 
-  void convert_to_csr(std::vector<bool>& matrix,
-                      index_t rows,
-                      index_t cols,
-                      std::vector<index_t>& indices,
-                      std::vector<index_t>& indptr)
+  void cpu_convert_to_csr(std::vector<bitmap_t>& bitmap,
+                          index_t rows,
+                          index_t cols,
+                          std::vector<index_t>& indices,
+                          std::vector<index_t>& indptr)
   {
     index_t offset_indptr   = 0;
     index_t offset_values   = 0;
     indptr[offset_indptr++] = 0;
 
+    index_t index        = 0;
+    bitmap_t element     = 0;
+    index_t bit_position = 0;
+
     for (index_t i = 0; i < rows; ++i) {
       for (index_t j = 0; j < cols; ++j) {
-        if (matrix[i * cols + j]) {
+        index        = i * cols + j;
+        element      = bitmap[index / (8 * sizeof(bitmap_t))];
+        bit_position = index % (8 * sizeof(bitmap_t));
+
+        if (((element >> bit_position) & 1)) {
           indices[offset_values] = static_cast<index_t>(j);
           offset_values++;
         }
@@ -247,7 +255,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     std::vector<index_t> customized_indices_h(nnz);
     std::vector<index_t> indptr_h(params.n_rows + 1);
 
-    convert_to_csr(dense_values_h, params.n_rows, params.n_cols, indices_h, indptr_h);
+    cpu_convert_to_csr(dense_values_h, params.n_rows, params.n_cols, indices_h, indptr_h);
 
     std::vector<value_t> dst_values_h(params.n_rows * params.top_k,
                                       std::numeric_limits<value_t>::infinity());
