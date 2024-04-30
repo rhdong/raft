@@ -574,8 +574,8 @@ void brute_force_search(
   IdxT n_rows = idx.dataset().extent(0);
   IdxT n_cols = queries.extent(0);
 
-  T* norms = nullptr;
-  if (idx.has_norms()) { norms = const_cast<T*>(idx.norms().data_handle()); }
+  // T* norms = nullptr;
+  // if (idx.has_norms()) { norms = const_cast<T*>(idx.norms().data_handle()); }
 
   // calc nnz
   IdxT nnz_h = 0;
