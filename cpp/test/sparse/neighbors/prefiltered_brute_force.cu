@@ -48,7 +48,7 @@ struct SelectKCsrInputs {
   index_t n_cols;
   index_t top_k;
   float sparsity;
-  raft::distance::DistanceType metric;
+  raft::distance::DistanceType metric = raft::distance::DistanceType::L2SqrtUnexpanded;
 };
 
 template <typename T>
