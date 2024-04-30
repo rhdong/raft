@@ -616,6 +616,25 @@ void brute_force_search(
     csr.get_elements().data(), csr.structure_view());
   std::optional<raft::device_vector_view<const IdxT, IdxT>> no_opt = std::nullopt;
   raft::sparse::matrix::select_k(res, const_csr_view, no_opt, distances, neighbors, true, true);
+
+  // post process
+  /*auto metric    = idx.metric();
+  auto metricArg = idx.metric_arg();
+  auto stream    = resource::get_cuda_stream(res);
+
+  if (metric == raft::distance::DistanceType::L2Unexpanded ||
+      metric == raft::distance::DistanceType::L2SqrtUnexpanded ||
+      metric == raft::distance::DistanceType::L2Expanded ||
+      metric == raft::distance::DistanceType::L2SqrtExpanded) {
+    T p = 0.5;  // standard l2
+    if (metric == raft::distance::DistanceType::LpUnexpanded) p = 1.0 / metricArg;
+    raft::linalg::unaryOp<T>(
+      neighbors.data_handle(),
+      distances.data_handle(),
+      n_cols * k,
+      [p] __device__(T input) { return powf(fabsf(input), p); },
+      stream);
+  }*/
 }
 
 }  // namespace raft::neighbors::detail
