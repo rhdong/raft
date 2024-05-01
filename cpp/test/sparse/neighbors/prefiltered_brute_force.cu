@@ -160,8 +160,8 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
       return;
     }
 
-    bool trans_a = params.transpose_a ? !is_row_major_A : is_row_major_A;
-    bool trans_b = params.transpose_b ? !is_row_major_B : is_row_major_B;
+    bool trans_a = is_row_major_A;
+    bool trans_b = is_row_major_B;
 
     for (index_t i = 0; i < params.n_rows; ++i) {
       for (index_t j = row_ptrs[i]; j < row_ptrs[i + 1]; ++j) {
