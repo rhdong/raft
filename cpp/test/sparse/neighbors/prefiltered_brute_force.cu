@@ -331,7 +331,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
   void Run()
   {
-    auto dataset_raw = raft::make_device_matrix_view<const value_t, index_t>(
+    auto dataset_raw = raft::make_device_matrix_view<const value_t, index_t, raft::row_major>(
       (const value_t*)dataset_d.data(), params.n_rows, params.dim);
 
     auto queries = raft::make_device_matrix_view<const value_t, index_t>(
@@ -341,7 +341,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     index_params.metric     = params.metric;
     index_params.metric_arg = 0;
 
-    auto dataset = brute_force::build<value_t>(handle, index_params, dataset_raw);
+    auto dataset = brute_force::build(handle, index_params, dataset_raw);
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
       out_val_d.data(), params.n_rows, params.top_k);
