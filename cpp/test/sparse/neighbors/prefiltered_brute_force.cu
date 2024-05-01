@@ -77,8 +77,8 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     : stream(resource::get_cuda_stream(handle)),
       params(::testing::TestWithParam<SelectKCsrInputs<index_t>>::GetParam()),
       filter_d(0, stream),
-      in_val_d(0, stream),
-      in_idx_d(0, stream),
+      dataset_d(0, stream),
+      queries_d(0, stream),
       out_val_d(0, stream),
       out_val_expected_d(0, stream),
       out_idx_d(0, stream),
@@ -250,23 +250,23 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
     nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, filter_h);
 
-    index_t in_val_size = params.n_rows * params.dim;
-    index_t in_idx_size = params.dim * params.n_cols;
+    index_t dataset_size = params.n_rows * params.dim;
+    index_t queries_size = params.dim * params.n_cols;
 
-    std::vector<value_t> in_val_h(in_val_size);
-    std::vector<value_t> in_idx_h(in_idx_size);
+    std::vector<value_t> dataset_h(dataset_size);
+    std::vector<value_t> queries_h(queries_size);
 
-    in_val_d.resize(in_val_size, stream);
-    in_idx_d.resize(in_idx_size, stream);
+    dataset_d.resize(dataset_size, stream);
+    queries_d.resize(queries_size, stream);
 
     auto blobs_in_val =
-      raft::make_device_matrix<value_t, index_t>(handle, 1, in_val_size + in_idx_size);
+      raft::make_device_matrix<value_t, index_t>(handle, 1, dataset_size + queries_size);
     auto labels = raft::make_device_vector<index_t, index_t>(handle, 1);
 
     raft::random::make_blobs<value_t, index_t>(blobs_in_val.data_handle(),
                                                labels.data_handle(),
                                                1,
-                                               in_val_size,
+                                               dataset_size + queries_size,
                                                1,
                                                stream,
                                                false,
@@ -278,27 +278,11 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                                                value_t(1.0f),
                                                uint64_t(2024));
 
-    raft::copy(in_val_h.data(), blobs_in_val.data_handle(), in_val_size, stream);
-    raft::copy(in_val_d.data(), blobs_in_val.data_handle(), in_val_size, stream);
+    raft::copy(dataset_h.data(), blobs_in_val.data_handle(), dataset_size, stream);
+    raft::copy(dataset_d.data(), blobs_in_val.data_handle(), dataset_size, stream);
 
-    auto blobs_in_idx = raft::make_device_matrix<index_t, index_t>(handle, 1, in_idx_size);
-    raft::random::make_blobs<index_t, index_t>(blobs_in_idx.data_handle(),
-                                               labels.data_handle(),
-                                               1,
-                                               in_idx_size,
-                                               1,
-                                               stream,
-                                               false,
-                                               nullptr,
-                                               nullptr,
-                                               value_t(1.0),
-                                               false,
-                                               value_t(-1.0f),
-                                               value_t(1.0f),
-                                               uint64_t(2024));
-
-    raft::copy(in_idx_h.data(), blobs_in_idx.data_handle(), in_idx_size, stream);
-    raft::copy(in_idx_d.data(), blobs_in_idx.data_handle(), in_idx_size, stream);
+    raft::copy(queries_h.data(), blobs_in_val.data_handle() + dataset_size, queries_size, stream);
+    raft::copy(queries_d.data(), blobs_in_val.data_handle() + dataset_size, queries_size, stream);
 
     resource::sync_stream(handle);
 
@@ -309,7 +293,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     filter_d.resize(filter_h.size(), stream);
     cpu_convert_to_csr(filter_h, params.n_rows, params.n_cols, indices_h, indptr_h);
 
-    cpu_sddmm(in_val_h, in_idx_h, values_h, indices_h, indptr_h, true, true);
+    cpu_sddmm(dataset_h, queries_h, values_h, indices_h, indptr_h, true, true);
 
     std::vector<value_t> out_val_h(params.n_rows * params.top_k,
                                    std::numeric_limits<value_t>::infinity());
@@ -348,12 +332,12 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
   void Run()
   {
-    auto in_val_raw = raft::make_device_matrix_view<const index_t, index_t>(
-      (const value_t*)in_val_d.data(), params.n_rows, params.dim);
+    auto dataset_raw = raft::make_device_matrix_view<const index_t, index_t>(
+      (const value_t*)dataset_d.data(), params.n_rows, params.dim);
 
-    raft::neighbors::brute_force::index<value_t> in_val =
+    raft::neighbors::brute_force::index<value_t> dataset =
       raft::neighbors::brute_force::build<value_t>(
-        handle, in_val_raw, params.n_rows, params.metric);
+        handle, dataset_raw, params.n_rows, params.metric);
     std::optional<raft::device_vector_view<const index_t, index_t>> in_idx = std::nullopt;
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
@@ -362,7 +346,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
       out_idx_d.data(), params.n_rows, params.top_k);
 
     raft::neighbors::brute_force::search_with_filtering(
-      handle, in_val, in_idx, out_val, out_idx, params.select_min, true);
+      handle, dataset, queries, out_val, out_idx, params.select_min, true);
 
     ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
                                            out_idx.data_handle(),
@@ -387,8 +371,8 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
   rmm::device_uvector<bitmap_t> filter_d;
 
-  rmm::device_uvector<value_t> in_val_d;
-  rmm::device_uvector<index_t> in_idx_d;
+  rmm::device_uvector<value_t> dataset_d;
+  rmm::device_uvector<value_t> queries_d;
 
   rmm::device_uvector<value_t> out_val_d;
   rmm::device_uvector<value_t> out_val_expected_d;
