@@ -16,6 +16,7 @@
 
 #include "../../test_utils.cuh"
 
+#include <raft/core/bitmap.cuh>
 #include <raft/core/device_csr_matrix.hpp>
 #include <raft/core/device_mdarray.hpp>
 #include <raft/core/device_mdspan.hpp>
@@ -343,13 +344,16 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
     auto dataset = brute_force::build(handle, index_params, dataset_raw);
 
+    auto filter =
+      raft::core::bitmap_view<bitmap_t, index_t>(filter_d.data(), params.n_rows, params.n_cols);
+
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
       out_val_d.data(), params.n_rows, params.top_k);
     auto out_idx = raft::make_device_matrix_view<index_t, index_t, raft::row_major>(
       out_idx_d.data(), params.n_rows, params.top_k);
 
     brute_force::search_with_filtering(
-      handle, dataset, queries, out_val, out_idx, params.select_min, true);
+      handle, dataset, queries, filter, out_val, out_idx, params.select_min, true);
 
     ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
                                            out_idx.data_handle(),
