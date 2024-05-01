@@ -245,13 +245,13 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
   void SetUp() override
   {
-    index_t element = raft::ceildiv(params.n_rows * params.n_cols_cols, index_t(sizeof(bitmap_t) * 8));
+    index_t element = raft::ceildiv(params.n_rows * params.n_cols, index_t(sizeof(bitmap_t) * 8));
     std::vector<bitmap_t> filter_h(element);
 
-    nnz = create_sparse_matrix(params.n_rows, params.n_cols_cols, params.sparsity, filter_h);
+    nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, filter_h);
 
     index_t in_val_size = params.n_rows * params.dim;
-    index_t in_idx_size = params.dim * params.n_cols_cols;
+    index_t in_idx_size = params.dim * params.n_cols;
 
     std::vector<value_t> in_val_h(in_val_size);
     std::vector<value_t> in_idx_h(in_idx_size);
@@ -308,7 +308,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     std::vector<index_t> indptr_h(params.n_rows + 1);
 
     filter_d.resize(filter_h.size(), stream);
-    cpu_convert_to_csr(filter_h, params.n_rows, params.n_cols_cols, indices_h, indptr_h);
+    cpu_convert_to_csr(filter_h, params.n_rows, params.n_cols, indices_h, indptr_h);
 
     cpu_sddmm(in_val_h, in_idx_h, values_h, indices_h, indptr_h, true, true);
 
@@ -332,7 +332,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                  values_h,
                  optional_indices_h,
                  params.n_rows,
-                 params.n_cols_cols,
+                 params.n_cols,
                  params.top_k,
                  out_val_h,
                  out_idx_d,
@@ -353,7 +353,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
       (const value_t*)in_val_d.data(), params.n_rows, params.dim);
 
     raft::neighbors::brute_force::index<value_t> in_val =
-      raft::neighbors::brute_force::build<value_t>(handle, in_val_raw, params.n_rowsetric);
+      raft::neighbors::brute_force::build<value_t>(handle, in_val_raw, params.n_rows, metric);
     std::optional<raft::device_vector_view<const index_t, index_t>> in_idx = std::nullopt;
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
