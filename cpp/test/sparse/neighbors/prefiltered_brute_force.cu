@@ -43,7 +43,7 @@
 namespace raft::neighbors::brute_force {
 
 template <typename index_t>
-struct SelectKCsrInputs {
+struct PrefilteredBruteForceInputs {
   index_t n_rows;
   index_t n_cols;
   index_t dim;
@@ -71,11 +71,12 @@ struct CompareApproxWithInf {
 };
 
 template <typename value_t, typename index_t, typename bitmap_t = uint32_t>
-class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>> {
+class PrefilteredBruteForceTest
+  : public ::testing::TestWithParam<PrefilteredBruteForceInputs<index_t>> {
  public:
-  SelectKCsrTest()
+  PrefilteredBruteForceTest()
     : stream(resource::get_cuda_stream(handle)),
-      params(::testing::TestWithParam<SelectKCsrInputs<index_t>>::GetParam()),
+      params(::testing::TestWithParam<PrefilteredBruteForceInputs<index_t>>::GetParam()),
       filter_d(0, stream),
       dataset_d(0, stream),
       queries_d(0, stream),
@@ -372,14 +373,13 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
   raft::resources handle;
   cudaStream_t stream;
 
-  SelectKCsrInputs<index_t> params;
+  PrefilteredBruteForceInputs<index_t> params;
 
   index_t nnz;
 
-  rmm::device_uvector<bitmap_t> filter_d;
-
   rmm::device_uvector<value_t> dataset_d;
   rmm::device_uvector<value_t> queries_d;
+  rmm::device_uvector<bitmap_t> filter_d;
 
   rmm::device_uvector<value_t> out_val_d;
   rmm::device_uvector<value_t> out_val_expected_d;
@@ -388,19 +388,19 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
   rmm::device_uvector<index_t> out_idx_expected_d;
 };
 
-using SelectKCsrTest_double_int64 = SelectKCsrTest<float, int64_t>;
-TEST_P(SelectKCsrTest_double_int64, Result) { Run(); }
+using PrefilteredBruteForceTest_double_int64 = PrefilteredBruteForceTest<float, int64_t>;
+TEST_P(PrefilteredBruteForceTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
-const std::vector<SelectKCsrInputs<index_t>> selectk_inputs = {{10, 32, 20, 10, 0.0},
-                                                               {10, 32, 20, 10, 0.0},
-                                                               {10, 32, 20, 10, 0.01},
-                                                               {10, 32, 20, 10, 0.1},
-                                                               {10, 32, 500, 251, 0.1},
-                                                               {10, 32, 500, 251, 0.6}};
+const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {{10, 32, 20, 10, 0.0},
+                                                                          {10, 32, 20, 10, 0.0},
+                                                                          {10, 32, 20, 10, 0.01},
+                                                                          {10, 32, 20, 10, 0.1},
+                                                                          {10, 32, 500, 251, 0.1},
+                                                                          {10, 32, 500, 251, 0.6}};
 
-INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
-                        SelectKCsrTest_double_int64,
+INSTANTIATE_TEST_CASE_P(PrefilteredBruteForceTest,
+                        PrefilteredBruteForceTest_double_int64,
                         ::testing::ValuesIn(selectk_inputs<int64_t>));
 
 }  // namespace raft::neighbors::brute_force
