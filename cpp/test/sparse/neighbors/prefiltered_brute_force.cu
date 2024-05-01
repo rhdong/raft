@@ -23,9 +23,9 @@
 #include <raft/core/resources.hpp>
 #include <raft/distance/distance_types.hpp>
 #include <raft/matrix/copy.cuh>
+#include <raft/neighbors/brute_force.cuh>
 #include <raft/random/make_blobs.cuh>
 #include <raft/random/rng_state.hpp>
-#include <raft/neighbors/brute_force.cuh>
 #include <raft/util/cuda_utils.cuh>
 
 #include <gtest/gtest.h>
@@ -329,7 +329,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
   }
 
   void Run()
-  {		
+  {
     auto in_val_raw = raft::make_device_matrix_view<const index_t, index_t>(
       (const value_t*)in_val_d.data(), params.n_rows, params.dim);
 
@@ -342,7 +342,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     auto out_idx = raft::make_device_matrix_view<index_t, index_t, raft::row_major>(
       out_idx_d.data(), params.n_rows, params.top_k);
 
-    raft::sparse::neighbors::search_with_filtering(
+    raft::neighbors::brute_force::search_with_filtering(
       handle, in_val, in_idx, out_val, out_idx, params.select_min, true);
 
     ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
