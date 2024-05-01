@@ -308,7 +308,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
     resource::sync_stream(handle);
 
-    auto optional_indices_h = std::nullopt;
+    std::optional<std::vector<index_t>> optional_indices_h = std::nullopt;
 
     cpu_select_k(indptr_h,
                  indices_h,
