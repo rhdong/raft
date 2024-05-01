@@ -343,17 +343,17 @@ class PrefilteredBruteForceTest
     index_params.metric     = params.metric;
     index_params.metric_arg = 0;
 
-    auto dataset = brute_force::build(handle, index_params, dataset_raw);
+    const brute_force::index<value_t> dataset = brute_force::build(handle, index_params, dataset_raw);
 
-    auto filter = raft::core::bitmap_view(
+    raft::core::bitmap_view<const uint32_t, index_t> filter = raft::core::bitmap_view(
       (const bitmap_t*)filter_d.data(), params.n_rows, params.n_cols);
 
-    auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
+    raft::device_matrix_view<value_t, index_t, raft::row_major> out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
       out_val_d.data(), params.n_rows, params.top_k);
-    auto out_idx = raft::make_device_matrix_view<index_t, index_t, raft::row_major>(
+    raft::device_matrix_view<index_t, index_t, raft::row_major> out_idx = raft::make_device_matrix_view<index_t, index_t, raft::row_major>(
       out_idx_d.data(), params.n_rows, params.top_k);
 
-    brute_force::search_with_filtering(handle, dataset, queries, filter, out_val, out_idx);
+    brute_force::search_with_filtering(handle, dataset, queries, filter, out_idx, out_val);
 
     ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
                                            out_idx.data_handle(),
