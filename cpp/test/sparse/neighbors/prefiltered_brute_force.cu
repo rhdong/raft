@@ -318,7 +318,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                  params.n_cols,
                  params.top_k,
                  out_val_h,
-                 out_idx_d,
+                 out_idx_h,
                  params.select_min);
 
     out_val_expected_d.resize(params.n_rows * params.top_k, stream);
@@ -340,8 +340,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
     raft::neighbors::brute_force::index<value_t> dataset =
       raft::neighbors::brute_force::build<value_t>(
-        handle, dataset_raw, params.n_rows, params.metric);
-    std::optional<raft::device_vector_view<const index_t, index_t>> in_idx = std::nullopt;
+        handle, dataset_raw, params.metric);
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
       out_val_d.data(), params.n_rows, params.top_k);
