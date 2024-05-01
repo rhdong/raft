@@ -257,14 +257,14 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     in_val_d.resize(in_val_size, stream);
     in_idx_d.resize(in_idx_size, stream);
 
-    auto blobs_a_b =
+    auto blobs_in_val =
       raft::make_device_matrix<value_t, index_t>(handle, 1, in_val_size + in_idx_size);
     auto labels = raft::make_device_vector<index_t, index_t>(handle, 1);
 
-    raft::random::make_blobs<value_t, index_t>(blobs_a_b.data_handle(),
+    raft::random::make_blobs<value_t, index_t>(blobs_in_val.data_handle(),
                                                labels.data_handle(),
                                                1,
-                                               in_val_size + in_idx_size,
+                                               in_val_size,
                                                1,
                                                stream,
                                                false,
@@ -276,11 +276,28 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                                                value_t(1.0f),
                                                uint64_t(2024));
 
-    raft::copy(in_val_h.data(), blobs_a_b.data_handle(), in_val_size, stream);
-    raft::copy(in_idx_h.data(), blobs_a_b.data_handle() + in_val_size, in_idx_size, stream);
+    raft::copy(in_val_h.data(), blobs_in_val.data_handle(), in_val_size, stream);
+    raft::copy(in_val_d.data(), blobs_in_val.data_handle(), in_val_size, stream);
 
-    raft::copy(in_val_d.data(), blobs_a_b.data_handle(), in_val_size, stream);
-    raft::copy(in_idx_d.data(), blobs_a_b.data_handle() + in_val_size, in_idx_size, stream);
+    auto blobs_in_idx =
+      raft::make_device_matrix<index_t, index_t>(handle, 1, in_idx_size);
+    raft::random::make_blobs<index_t, index_t>(blobs_in_idx.data_handle(),
+                                               labels.data_handle(),
+                                               1,
+                                               in_idx_size,
+                                               1,
+                                               stream,
+                                               false,
+                                               nullptr,
+                                               nullptr,
+                                               value_t(1.0),
+                                               false,
+                                               value_t(-1.0f),
+                                               value_t(1.0f),
+                                               uint64_t(2024));
+
+    raft::copy(in_idx_h.data(), blobs_in_idx.data_handle(), in_idx_size, stream);
+    raft::copy(in_idx_d.data(), blobs_in_idx.data_handle(), in_idx_size, stream);
 
     resource::sync_stream(handle);
 
