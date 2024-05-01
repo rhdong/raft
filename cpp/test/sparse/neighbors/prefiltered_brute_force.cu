@@ -39,8 +39,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace raft {
-namespace sparse {
+namespace raft::neighbors::brute_force {
 
 template <typename index_t>
 struct SelectKCsrInputs {
@@ -338,18 +337,18 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     auto queries = raft::make_device_matrix_view<const value_t, index_t>(
       (const value_t*)queries_d.data(), params.dim, params.n_cols);
 
-    raft::neighbors::brute_force::index_params index_params{};
+    brute_force::index_params index_params{};
     index_params.metric     = params.metric;
     index_params.metric_arg = 0;
 
-    auto dataset = raft::neighbors::brute_force::build(handle, index_params, dataset_raw);
+    auto dataset = brute_force::build(handle, index_params, dataset_raw);
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
       out_val_d.data(), params.n_rows, params.top_k);
     auto out_idx = raft::make_device_matrix_view<index_t, index_t, raft::row_major>(
       out_idx_d.data(), params.n_rows, params.top_k);
 
-    raft::neighbors::brute_force::search_with_filtering(
+    brute_force::search_with_filtering(
       handle, dataset, queries, out_val, out_idx, params.select_min, true);
 
     ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
@@ -406,5 +405,4 @@ INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
                         SelectKCsrTest_double_int64,
                         ::testing::ValuesIn(selectk_inputs<int64_t>));
 
-}  // namespace sparse
-}  // namespace raft
+}  // namespace raft::neighbors::brute_force
