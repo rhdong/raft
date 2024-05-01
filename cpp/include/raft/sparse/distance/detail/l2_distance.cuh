@@ -176,12 +176,12 @@ template <typename value_idx, typename value_t, int tpb = 256>
 void compute_on_compressed(raft::resources const& handle,
                        value_t* compressed_C,
                        const value_idx* indptr,
+                       const value_idx nnz,
+                       const value_idx n_rows,
                        const value_idx* cols,
                        const value_t* Q_sq_norms,
                        const value_t* R_sq_norms,
-					   raft::distance::DistanceType metric,
-                       const value_idx n_rows,
-                       const value_idx nnz)
+					   raft::distance::DistanceType metric)
 {
   auto stream = resource::get_cuda_stream(handle);
 
