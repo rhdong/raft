@@ -353,8 +353,7 @@ class PrefilteredBruteForceTest
     auto out_idx = raft::make_device_matrix_view<index_t, index_t, raft::row_major>(
       out_idx_d.data(), params.n_rows, params.top_k);
 
-    brute_force::search_with_filtering(
-      handle, dataset, queries, filter, out_val, out_idx, params.select_min, true);
+    brute_force::search_with_filtering(handle, dataset, queries, filter, out_val, out_idx);
 
     ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
                                            out_idx.data_handle(),
