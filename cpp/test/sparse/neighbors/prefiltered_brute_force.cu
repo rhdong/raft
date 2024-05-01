@@ -345,7 +345,7 @@ class PrefilteredBruteForceTest
 
     auto dataset = brute_force::build(handle, index_params, dataset_raw);
 
-    auto filter = raft::core::bitmap_view<bitmap_t, index_t>(
+    auto filter = raft::core::bitmap_view(
       (const bitmap_t*)filter_d.data(), params.n_rows, params.n_cols);
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
