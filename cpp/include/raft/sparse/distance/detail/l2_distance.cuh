@@ -123,7 +123,7 @@ RAFT_KERNEL compute_cosine_warp_kernel(value_t* __restrict__ compressed_C,
   value_t dot = compressed_C[tid];
 
   compressed_C[tid] = dot / raft::sqrt(Q_sq_norms[i] * R_sq_norms[j]);
-}								   
+}
 
 template <typename value_idx, typename value_t>
 RAFT_KERNEL compute_correlation_warp_kernel(value_t* __restrict__ C,
@@ -174,14 +174,14 @@ void compute_euclidean(value_t* C,
 
 template <typename value_idx, typename value_t, int tpb = 256>
 void compute_on_compressed(raft::resources const& handle,
-                       value_t* compressed_C,
-                       const value_idx* indptr,
-                       const value_idx nnz,
-                       const value_idx n_rows,
-                       const value_idx* cols,
-                       const value_t* Q_sq_norms,
-                       const value_t* R_sq_norms,
-					   raft::distance::DistanceType metric)
+                           value_t* compressed_C,
+                           const value_idx* indptr,
+                           const value_idx nnz,
+                           const value_idx n_rows,
+                           const value_idx* cols,
+                           const value_t* Q_sq_norms,
+                           const value_t* R_sq_norms,
+                           raft::distance::DistanceType metric)
 {
   auto stream = resource::get_cuda_stream(handle);
 
@@ -190,10 +190,10 @@ void compute_on_compressed(raft::resources const& handle,
   raft::sparse::convert::csr_to_coo(indptr, n_rows, rows, nnz, stream);
 
   int blocks = raft::ceildiv<size_t>((size_t)nnz, tpb);
-  if(metric == raft::distance::DistanceType::L2SqrtExpanded) {
+  if (metric == raft::distance::DistanceType::L2SqrtExpanded) {
     compute_euclidean_warp_kernel<<<blocks, tpb, 0, stream>>>(
       compressed_C, rows, cols, Q_sq_norms, R_sq_norms, nnz);
-  } else if(metric == raft::distance::DistanceType::CosineExpanded) {
+  } else if (metric == raft::distance::DistanceType::CosineExpanded) {
     compute_cosine_warp_kernel<<<blocks, tpb, 0, stream>>>(
       compressed_C, rows, cols, Q_sq_norms, R_sq_norms, nnz);
   }
