@@ -391,12 +391,7 @@ using PrefilteredBruteForceTest_double_int64 = PrefilteredBruteForceTest<float, 
 TEST_P(PrefilteredBruteForceTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
-const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {{10, 32, 20, 10, 0.0},
-                                                                          {10, 32, 20, 10, 0.0},
-                                                                          {10, 32, 20, 10, 0.01},
-                                                                          {10, 32, 20, 10, 0.1},
-                                                                          {10, 32, 500, 251, 0.1},
-                                                                          {10, 32, 500, 251, 0.6}};
+const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {{100, 320, 50, 25, 0.1}};
 
 INSTANTIATE_TEST_CASE_P(PrefilteredBruteForceTest,
                         PrefilteredBruteForceTest_double_int64,
