@@ -150,10 +150,12 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                  const std::vector<index_t>& cols,
                  const std::vector<index_t>& row_ptrs,
                  bool is_row_major_A,
-                 bool is_row_major_B)
+                 bool is_row_major_B,
+                 value_t alpha = 1.0,
+                 value_t beta = 0.0)
   {
-    if (params.m * params.k != static_cast<index_t>(A.size()) ||
-        params.k * params.n != static_cast<index_t>(B.size())) {
+    if (params.n_rows * params.top_k != static_cast<index_t>(A.size()) ||
+        params.top_k * params.n_cols != static_cast<index_t>(B.size())) {
       std::cerr << "Matrix dimensions and vector size do not match!" << std::endl;
       return;
     }
@@ -161,15 +163,15 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     bool trans_a = params.transpose_a ? !is_row_major_A : is_row_major_A;
     bool trans_b = params.transpose_b ? !is_row_major_B : is_row_major_B;
 
-    for (index_t i = 0; i < params.m; ++i) {
+    for (index_t i = 0; i < params.n_rows; ++i) {
       for (index_t j = row_ptrs[i]; j < row_ptrs[i + 1]; ++j) {
         value_t sum = 0;
-        for (index_t l = 0; l < params.k; ++l) {
-          index_t a_index = trans_a ? i * params.k + l : l * params.m + i;
-          index_t b_index = trans_b ? l * params.n + cols[j] : cols[j] * params.k + l;
+        for (index_t l = 0; l < params.top_k; ++l) {
+          index_t a_index = trans_a ? i * params.top_k + l : l * params.n_rows + i;
+          index_t b_index = trans_b ? l * params.n_cols + cols[j] : cols[j] * params.top_k + l;
           sum += A[a_index] * B[b_index];
         }
-        vals[j] = params.alpha * sum + params.beta * vals[j];
+        vals[j] = alpha * sum + beta * vals[j];
       }
     }
   }
@@ -243,13 +245,13 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
   void SetUp() override
   {
-    index_t element = raft::ceildiv(params.n_rows * params.n_cols, index_t(sizeof(bitmap_t) * 8));
+    index_t element = raft::ceildiv(params.n_rows * params.n_cols_cols, index_t(sizeof(bitmap_t) * 8));
     std::vector<bitmap_t> filter_h(element);
 
-    nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, filter_h);
+    nnz = create_sparse_matrix(params.n_rows, params.n_cols_cols, params.sparsity, filter_h);
 
     index_t in_val_size = params.n_rows * params.dim;
-    index_t in_idx_size = params.dim * params.n_cols;
+    index_t in_idx_size = params.dim * params.n_cols_cols;
 
     std::vector<value_t> in_val_h(in_val_size);
     std::vector<value_t> in_idx_h(in_idx_size);
@@ -306,7 +308,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     std::vector<index_t> indptr_h(params.n_rows + 1);
 
     filter_d.resize(filter_h.size(), stream);
-    cpu_convert_to_csr(filter_h, params.n_rows, params.n_cols, indices_h, indptr_h);
+    cpu_convert_to_csr(filter_h, params.n_rows, params.n_cols_cols, indices_h, indptr_h);
 
     cpu_sddmm(in_val_h, in_idx_h, values_h, indices_h, indptr_h, true, true);
 
@@ -330,7 +332,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                  values_h,
                  optional_indices_h,
                  params.n_rows,
-                 params.n_cols,
+                 params.n_cols_cols,
                  params.top_k,
                  out_val_h,
                  out_idx_d,
@@ -351,7 +353,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
       (const value_t*)in_val_d.data(), params.n_rows, params.dim);
 
     raft::neighbors::brute_force::index<value_t> in_val =
-      raft::neighbors::brute_force::build<value_t>(handle, in_val_raw, params.metric);
+      raft::neighbors::brute_force::build<value_t>(handle, in_val_raw, params.n_rowsetric);
     std::optional<raft::device_vector_view<const index_t, index_t>> in_idx = std::nullopt;
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
