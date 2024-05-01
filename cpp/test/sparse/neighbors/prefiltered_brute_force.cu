@@ -152,7 +152,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                  bool is_row_major_A,
                  bool is_row_major_B,
                  value_t alpha = 1.0,
-                 value_t beta = 0.0)
+                 value_t beta  = 0.0)
   {
     if (params.n_rows * params.top_k != static_cast<index_t>(A.size()) ||
         params.top_k * params.n_cols != static_cast<index_t>(B.size())) {
@@ -281,8 +281,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     raft::copy(in_val_h.data(), blobs_in_val.data_handle(), in_val_size, stream);
     raft::copy(in_val_d.data(), blobs_in_val.data_handle(), in_val_size, stream);
 
-    auto blobs_in_idx =
-      raft::make_device_matrix<index_t, index_t>(handle, 1, in_idx_size);
+    auto blobs_in_idx = raft::make_device_matrix<index_t, index_t>(handle, 1, in_idx_size);
     raft::random::make_blobs<index_t, index_t>(blobs_in_idx.data_handle(),
                                                labels.data_handle(),
                                                1,
@@ -353,7 +352,8 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
       (const value_t*)in_val_d.data(), params.n_rows, params.dim);
 
     raft::neighbors::brute_force::index<value_t> in_val =
-      raft::neighbors::brute_force::build<value_t>(handle, in_val_raw, params.n_rows, metric);
+      raft::neighbors::brute_force::build<value_t>(
+        handle, in_val_raw, params.n_rows, params.metric);
     std::optional<raft::device_vector_view<const index_t, index_t>> in_idx = std::nullopt;
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
