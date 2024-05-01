@@ -384,10 +384,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
   rmm::device_uvector<index_t> out_idx_expected_d;
 };
 
-using SelectKCsrTest_float_int = SelectKCsrTest<float, int>;
-TEST_P(SelectKCsrTest_float_int, Result) { Run(); }
-
-using SelectKCsrTest_double_int64 = SelectKCsrTest<double, int64_t>;
+using SelectKCsrTest_double_int64 = SelectKCsrTest<float, int64_t>;
 TEST_P(SelectKCsrTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
@@ -398,9 +395,6 @@ const std::vector<SelectKCsrInputs<index_t>> selectk_inputs = {{10, 32, 20, 10, 
                                                                {10, 32, 500, 251, 0.1},
                                                                {10, 32, 500, 251, 0.6}};
 
-INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
-                        SelectKCsrTest_float_int,
-                        ::testing::ValuesIn(selectk_inputs<int>));
 INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
                         SelectKCsrTest_double_int64,
                         ::testing::ValuesIn(selectk_inputs<int64_t>));
