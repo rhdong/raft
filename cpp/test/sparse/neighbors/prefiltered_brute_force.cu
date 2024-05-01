@@ -299,7 +299,6 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
     out_val_d.resize(params.n_rows * params.top_k, stream);
     out_idx_d.resize(params.n_rows * params.top_k, stream);
-    values_d.resize(nnz, stream);
 
     update_device(out_val_d.data(), out_val_h.data(), out_val_h.size(), stream);
     update_device(out_idx_d.data(), out_idx_d.data(), out_idx_d.size(), stream);
@@ -319,9 +318,6 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
                  out_val_h,
                  out_idx_d,
                  params.select_min);
-
-    indices_d.resize(nnz, stream);
-    indptr_d.resize(params.n_rows + 1, stream);
 
     out_val_expected_d.resize(params.n_rows * params.top_k, stream);
     out_idx_expected_d.resize(params.n_rows * params.top_k, stream);
