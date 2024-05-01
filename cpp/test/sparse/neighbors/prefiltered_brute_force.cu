@@ -25,7 +25,7 @@
 #include <raft/matrix/copy.cuh>
 #include <raft/random/make_blobs.cuh>
 #include <raft/random/rng_state.hpp>
-#include <raft/sparse/neighbors/brute_force.cuh>
+#include <raft/neighbors/brute_force.cuh>
 #include <raft/util/cuda_utils.cuh>
 
 #include <gtest/gtest.h>
