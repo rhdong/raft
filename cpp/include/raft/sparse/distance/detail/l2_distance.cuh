@@ -87,6 +87,45 @@ RAFT_KERNEL compute_euclidean_warp_kernel(value_t* __restrict__ C,
 }
 
 template <typename value_idx, typename value_t>
+RAFT_KERNEL compute_euclidean_warp_kernel(value_t* __restrict__ compressed_C,
+                                          const value_idx* __restrict__ rows,
+                                          const value_idx* __restrict__ cols,
+                                          const value_t* __restrict__ Q_sq_norms,
+                                          const value_t* __restrict__ R_sq_norms,
+                                          value_idx nnz)
+{
+  std::size_t tid = blockDim.x * blockIdx.x + threadIdx.x;
+
+  if (tid > nnz) return;
+  value_idx i = rows[tid];
+  value_idx j = cols[tid];
+
+  value_t dot = compressed_C[tid];
+
+  // e.g. Euclidean expansion func = -2.0 * dot + q_norm + r_norm
+  compressed_C[tid] = raft::sqrt(-2.0 * dot + Q_sq_norms[i] + R_sq_norms[j]);
+}
+
+template <typename value_idx, typename value_t>
+RAFT_KERNEL compute_cosine_warp_kernel(value_t* __restrict__ compressed_C,
+                                       const value_idx* __restrict__ rows,
+                                       const value_idx* __restrict__ cols,
+                                       const value_t* __restrict__ Q_sq_norms,
+                                       const value_t* __restrict__ R_sq_norms,
+                                       value_idx nnz)
+{
+  std::size_t tid = blockDim.x * blockIdx.x + threadIdx.x;
+
+  if (tid > nnz) return;
+  value_idx i = rows[tid];
+  value_idx j = cols[tid];
+
+  value_t dot = compressed_C[tid];
+
+  compressed_C[tid] = dot / raft::sqrt(Q_sq_norms[i] * R_sq_norms[j]);
+}								   
+
+template <typename value_idx, typename value_t>
 RAFT_KERNEL compute_correlation_warp_kernel(value_t* __restrict__ C,
                                             const value_t* __restrict__ Q_sq_norms,
                                             const value_t* __restrict__ R_sq_norms,
@@ -131,6 +170,33 @@ void compute_euclidean(value_t* C,
   int blocks = raft::ceildiv<size_t>((size_t)n_rows * n_cols, tpb);
   compute_euclidean_warp_kernel<<<blocks, tpb, 0, stream>>>(
     C, Q_sq_norms, R_sq_norms, n_rows, n_cols, expansion_func);
+}
+
+template <typename value_idx, typename value_t, int tpb = 256>
+void compute_on_compressed(raft::resources const& handle,
+                       value_t* compressed_C,
+                       const value_idx* indptr,
+                       const value_idx* cols,
+                       const value_t* Q_sq_norms,
+                       const value_t* R_sq_norms,
+					   raft::distance::DistanceType metric,
+                       const value_idx n_rows,
+                       const value_idx nnz)
+{
+  auto stream = resource::get_cuda_stream(handle);
+
+  rmm::device_uvector<value_idx> rows(nnz, stream);
+
+  raft::sparse::convert::csr_to_coo(indptr, n_rows, rows, nnz, stream);
+
+  int blocks = raft::ceildiv<size_t>((size_t)nnz, tpb);
+  if(metric == raft::distance::DistanceType::L2SqrtExpanded) {
+    compute_euclidean_warp_kernel<<<blocks, tpb, 0, stream>>>(
+      compressed_C, rows, cols, Q_sq_norms, R_sq_norms, nnz);
+  } else if(metric == raft::distance::DistanceType::CosineExpanded) {
+    compute_cosine_warp_kernel<<<blocks, tpb, 0, stream>>>(
+      compressed_C, rows, cols, Q_sq_norms, R_sq_norms, nnz);
+  }
 }
 
 template <typename value_idx, typename value_t, int tpb = 256, typename expansion_f>
