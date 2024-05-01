@@ -333,7 +333,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     auto in_val_raw = raft::make_device_matrix_view<const index_t, index_t>(
       in_val_d.data(), params.n_rows, params.dim);
 
-    brute_force::index<T> in_val = brute_force::build(handle, in_val_raw, params.metric);
+    raft::neighbors::brute_force::index<T> in_val = raft::neighbors::brute_force::build(handle, in_val_raw, params.metric);
     std::optional<raft::device_vector_view<const index_t, index_t>> in_idx = std::nullopt;
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
@@ -384,12 +384,12 @@ using SelectKCsrTest_double_int64 = SelectKCsrTest<double, int64_t>;
 TEST_P(SelectKCsrTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
-const std::vector<SelectKCsrInputs<index_t>> selectk_inputs = {{10, 32, 20, 10, 0.0, false},
-                                                               {10, 32, 20, 10, 0.0, true},
-                                                               {10, 32, 20, 10, 0.01, false},
-                                                               {10, 32, 20, 10, 0.1, true},
-                                                               {10, 32, 500, 251, 0.1, false},
-                                                               {10, 32, 500, 251, 0.6, true}};
+const std::vector<SelectKCsrInputs<index_t>> selectk_inputs = {{10, 32, 20, 10, 0.0},
+                                                               {10, 32, 20, 10, 0.0},
+                                                               {10, 32, 20, 10, 0.01},
+                                                               {10, 32, 20, 10, 0.1},
+                                                               {10, 32, 500, 251, 0.1},
+                                                               {10, 32, 500, 251, 0.6}};
 
 INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
                         SelectKCsrTest_float_int,
