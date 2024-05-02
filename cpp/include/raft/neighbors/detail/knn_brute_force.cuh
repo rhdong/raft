@@ -613,7 +613,7 @@ void brute_force_search(
                               raft::make_host_scalar_view<T>(&beta));
   // select k
   auto const_csr_view = make_device_csr_matrix_view<const T, IdxT, IdxT, IdxT>(
-    filter_csr.get_elements().data(), filter_csr.structure_view());
+    csr.get_elements().data(), csr.structure_view());
   std::optional<raft::device_vector_view<const IdxT, IdxT>> no_opt = std::nullopt;
   raft::sparse::matrix::select_k(res, const_csr_view, no_opt, distances, neighbors, true, true);
 
