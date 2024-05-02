@@ -587,14 +587,14 @@ void brute_force_search(
   raft::copy(&nnz_h, nnz.data(), 1, resource::get_cuda_stream(res));
 
   // create a owning csr filter
-  auto filter_csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
+  auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
 
   // fill csr
   raft::sparse::convert::bitmap_to_csr(res, filter, filter_csr);
 
   // create filter csr view
-  auto filter_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(filter_csr.get_elements().data(),
-                                                                      filter_csr.structure_view());
+  auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
+                                                                      csr.structure_view());
 
   // create dataset view
   auto dataset_view =
@@ -606,7 +606,7 @@ void brute_force_search(
   raft::sparse::linalg::sddmm(res,
                               queries,
                               dataset_view,
-                              filter_view,
+                              csr_view,
                               raft::linalg::Operation::NON_TRANSPOSE,
                               raft::linalg::Operation::TRANSPOSE,
                               raft::make_host_scalar_view<T>(&alpha),
