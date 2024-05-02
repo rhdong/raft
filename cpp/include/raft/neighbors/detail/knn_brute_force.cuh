@@ -608,7 +608,7 @@ void brute_force_search(
                               dataset_view,
                               csr_view,
                               raft::linalg::Operation::NON_TRANSPOSE,
-                              raft::linalg::Operation::TRANSPOSE,
+                              raft::linalg::Operation::NON_TRANSPOSE,
                               raft::make_host_scalar_view<T>(&alpha),
                               raft::make_host_scalar_view<T>(&beta));
   // select k
