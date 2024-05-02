@@ -39,6 +39,7 @@
 #include <random>
 #include <unordered_set>
 #include <vector>
+#include <string>
 
 namespace raft::neighbors::brute_force {
 
@@ -418,7 +419,7 @@ using PrefilteredBruteForceTest_double_int64 = PrefilteredBruteForceTest<float, 
 TEST_P(PrefilteredBruteForceTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
-const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {{2, 3, 2, 2, 0.4}};
+const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {{2, 3, 1, 2, 0.4}};
 
 INSTANTIATE_TEST_CASE_P(PrefilteredBruteForceTest,
                         PrefilteredBruteForceTest_double_int64,
