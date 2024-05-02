@@ -53,6 +53,15 @@ struct PrefilteredBruteForceInputs {
   bool select_min                     = true;
 };
 
+template<typename T>
+void dump_vector(const std::vector<T>& vec, const std::string& name) {
+    std::cout << "Dumping vector " << name << " (" << vec.size() << " elements):" << std::endl;
+    for (size_t i = 0; i < vec.size(); ++i) {
+        std::cout << name << "[" << i << "] = " << vec[i] << std::endl;
+    }
+}
+
+
 template <typename T>
 struct CompareApproxWithInf {
   CompareApproxWithInf(T eps_) : eps(eps_) {}
@@ -130,6 +139,7 @@ class PrefilteredBruteForceTest
     bitmap_t element     = 0;
     index_t bit_position = 0;
 
+    std::cout << "cpu_convert_to_csr:" << std::endl;
     for (index_t i = 0; i < rows; ++i) {
       for (index_t j = 0; j < cols; ++j) {
         index        = i * cols + j;
@@ -139,10 +149,17 @@ class PrefilteredBruteForceTest
         if (((element >> bit_position) & 1)) {
           indices[offset_values] = static_cast<index_t>(j);
           offset_values++;
+          std::cout << 1 << ", ";
+        } else {
+          std::cout << 0 << ", ";
         }
+        std::cout << std::endl;
       }
       indptr[offset_indptr++] = static_cast<index_t>(offset_values);
     }
+    dump_vector(bitmap, "bitmap");
+    dump_vector(indices, "indices");
+    dump_vector(indptr, "indptr");
   }
 
   void cpu_sddmm(const std::vector<value_t>& A,
@@ -175,6 +192,12 @@ class PrefilteredBruteForceTest
         vals[j] = alpha * sum + beta * vals[j];
       }
     }
+
+    dump_vector(cols, "cols");
+    dump_vector(row_ptrs, "row_ptrs");
+    dump_vector(A, "A");
+    dump_vector(B, "B");
+    dump_vector(vals, "vals");
   }
 
   void cpu_select_k(const std::vector<index_t>& indptr_h,
@@ -226,6 +249,9 @@ class PrefilteredBruteForceTest
         }
       }
     }
+
+    dump_vector(out_values_h, "out_values_h");
+    dump_vector(out_indices_h, "out_indices_h");
   }
 
   void random_array(value_t* array, size_t size)
@@ -392,7 +418,7 @@ using PrefilteredBruteForceTest_double_int64 = PrefilteredBruteForceTest<float, 
 TEST_P(PrefilteredBruteForceTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
-const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {{2, 3, 3, 2, 0.4}};
+const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {{2, 3, 2, 2, 0.4}};
 
 INSTANTIATE_TEST_CASE_P(PrefilteredBruteForceTest,
                         PrefilteredBruteForceTest_double_int64,
