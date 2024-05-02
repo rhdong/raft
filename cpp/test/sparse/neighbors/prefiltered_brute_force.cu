@@ -189,6 +189,7 @@ class PrefilteredBruteForceTest
           index_t a_index = trans_a ? i * params.dim + l : l * params.n_queries + i;
           index_t b_index = trans_b ? l * params.n_dataset + cols[j] : cols[j] * params.dim + l;
           sum += A[a_index] * B[b_index];
+          std::cout << "a_index:" << a_index << ", " << "b_index:" << b_index << std::endl;
         }
         vals[j] = alpha * sum + beta * vals[j];
       }
