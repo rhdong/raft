@@ -590,7 +590,7 @@ void brute_force_search(
   auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
 
   // fill csr
-  raft::sparse::convert::bitmap_to_csr(res, filter, filter_csr);
+  raft::sparse::convert::bitmap_to_csr(res, filter, csr);
 
   // create filter csr view
   auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
