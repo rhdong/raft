@@ -44,8 +44,8 @@ namespace raft::neighbors::brute_force {
 
 template <typename index_t>
 struct PrefilteredBruteForceInputs {
-  index_t n_rows;
-  index_t n_cols;
+  index_t n_queries;
+  index_t n_dataset;
   index_t dim;
   index_t top_k;
   float sparsity;
@@ -155,8 +155,8 @@ class PrefilteredBruteForceTest
                  value_t alpha = 1.0,
                  value_t beta  = 0.0)
   {
-    if (params.n_rows * params.top_k != static_cast<index_t>(A.size()) ||
-        params.top_k * params.n_cols != static_cast<index_t>(B.size())) {
+    if (params.n_queries * params.dim != static_cast<index_t>(A.size()) ||
+        params.dim * params.n_dataset != static_cast<index_t>(B.size())) {
       std::cerr << "Matrix dimensions and vector size do not match!" << std::endl;
       return;
     }
@@ -164,12 +164,12 @@ class PrefilteredBruteForceTest
     bool trans_a = is_row_major_A;
     bool trans_b = is_row_major_B;
 
-    for (index_t i = 0; i < params.n_rows; ++i) {
+    for (index_t i = 0; i < params.n_queries; ++i) {
       for (index_t j = row_ptrs[i]; j < row_ptrs[i + 1]; ++j) {
         value_t sum = 0;
-        for (index_t l = 0; l < params.top_k; ++l) {
-          index_t a_index = trans_a ? i * params.top_k + l : l * params.n_rows + i;
-          index_t b_index = trans_b ? l * params.n_cols + cols[j] : cols[j] * params.top_k + l;
+        for (index_t l = 0; l < params.dim; ++l) {
+          index_t a_index = trans_a ? i * params.dim + l : l * params.n_queries + i;
+          index_t b_index = trans_b ? l * params.n_dataset + cols[j] : cols[j] * params.dim + l;
           sum += A[a_index] * B[b_index];
         }
         vals[j] = alpha * sum + beta * vals[j];
@@ -181,8 +181,8 @@ class PrefilteredBruteForceTest
                     const std::vector<index_t>& indices_h,
                     const std::vector<value_t>& values_h,
                     std::optional<std::vector<index_t>>& in_idx_h,
-                    index_t n_rows,
-                    index_t n_cols,
+                    index_t n_queries,
+                    index_t n_dataset,
                     index_t top_k,
                     std::vector<value_t>& out_values_h,
                     std::vector<index_t>& out_indices_h,
@@ -193,7 +193,7 @@ class PrefilteredBruteForceTest
       return select_min ? a.first < b.first : a.first >= b.first;
     };
 
-    for (index_t row = 0; row < n_rows; ++row) {
+    for (index_t row = 0; row < n_queries; ++row) {
       std::priority_queue<std::pair<value_t, index_t>,
                           std::vector<std::pair<value_t, index_t>>,
                           decltype(comp)>
@@ -246,13 +246,13 @@ class PrefilteredBruteForceTest
 
   void SetUp() override
   {
-    index_t element = raft::ceildiv(params.n_rows * params.n_cols, index_t(sizeof(bitmap_t) * 8));
+    index_t element = raft::ceildiv(params.n_queries * params.n_dataset, index_t(sizeof(bitmap_t) * 8));
     std::vector<bitmap_t> filter_h(element);
 
-    nnz = create_sparse_matrix(params.n_rows, params.n_cols, params.sparsity, filter_h);
+    nnz = create_sparse_matrix(params.n_queries, params.n_dataset, params.sparsity, filter_h);
 
-    index_t dataset_size = params.n_rows * params.dim;
-    index_t queries_size = params.dim * params.n_cols;
+    index_t dataset_size = params.n_dataset * params.dim;
+    index_t queries_size = params.n_queries * params.dim;
 
     std::vector<value_t> dataset_h(dataset_size);
     std::vector<value_t> queries_h(queries_size);
@@ -289,19 +289,19 @@ class PrefilteredBruteForceTest
 
     std::vector<value_t> values_h(nnz);
     std::vector<index_t> indices_h(nnz);
-    std::vector<index_t> indptr_h(params.n_rows + 1);
+    std::vector<index_t> indptr_h(params.n_queries + 1);
 
     filter_d.resize(filter_h.size(), stream);
-    cpu_convert_to_csr(filter_h, params.n_rows, params.n_cols, indices_h, indptr_h);
+    cpu_convert_to_csr(filter_h, params.n_queries, params.n_dataset, indices_h, indptr_h);
 
-    cpu_sddmm(dataset_h, queries_h, values_h, indices_h, indptr_h, true, true);
+    cpu_sddmm(queries_h, dataset_h, values_h, indices_h, indptr_h, true, false);
 
-    std::vector<value_t> out_val_h(params.n_rows * params.top_k,
+    std::vector<value_t> out_val_h(params.n_queries * params.top_k,
                                    std::numeric_limits<value_t>::infinity());
-    std::vector<index_t> out_idx_h(params.n_rows * params.top_k, static_cast<index_t>(0));
+    std::vector<index_t> out_idx_h(params.n_queries * params.top_k, static_cast<index_t>(0));
 
-    out_val_d.resize(params.n_rows * params.top_k, stream);
-    out_idx_d.resize(params.n_rows * params.top_k, stream);
+    out_val_d.resize(params.n_queries * params.top_k, stream);
+    out_idx_d.resize(params.n_queries * params.top_k, stream);
 
     update_device(out_val_d.data(), out_val_h.data(), out_val_h.size(), stream);
     update_device(out_idx_d.data(), out_idx_d.data(), out_idx_d.size(), stream);
@@ -315,15 +315,15 @@ class PrefilteredBruteForceTest
                  indices_h,
                  values_h,
                  optional_indices_h,
-                 params.n_rows,
-                 params.n_cols,
+                 params.n_queries,
+                 params.n_dataset,
                  params.top_k,
                  out_val_h,
                  out_idx_h,
                  params.select_min);
 
-    out_val_expected_d.resize(params.n_rows * params.top_k, stream);
-    out_idx_expected_d.resize(params.n_rows * params.top_k, stream);
+    out_val_expected_d.resize(params.n_queries * params.top_k, stream);
+    out_idx_expected_d.resize(params.n_queries * params.top_k, stream);
 
     update_device(out_val_expected_d.data(), out_val_h.data(), out_val_h.size(), stream);
     update_device(out_idx_expected_d.data(), out_idx_d.data(), out_idx_d.size(), stream);
@@ -334,10 +334,10 @@ class PrefilteredBruteForceTest
   void Run()
   {
     auto dataset_raw = raft::make_device_matrix_view<const value_t, index_t, raft::row_major>(
-      (const value_t*)dataset_d.data(), params.n_rows, params.dim);
+      (const value_t*)dataset_d.data(), params.n_dataset, params.dim);
 
     auto queries = raft::make_device_matrix_view<const value_t, index_t>(
-      (const value_t*)queries_d.data(), params.n_cols, params.dim);
+      (const value_t*)queries_d.data(), params.n_queries, params.dim);
 
     brute_force::index_params index_params{};
     index_params.metric     = params.metric;
@@ -346,24 +346,24 @@ class PrefilteredBruteForceTest
     auto dataset = brute_force::build(handle, index_params, dataset_raw);
 
     auto filter = raft::core::bitmap_view(
-      (const bitmap_t*)filter_d.data(), params.n_rows, params.n_cols);
+      (const bitmap_t*)filter_d.data(), params.n_queries, params.n_dataset);
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
-      out_val_d.data(), params.n_rows, params.top_k);
+      out_val_d.data(), params.n_queries, params.top_k);
     auto out_idx = raft::make_device_matrix_view<index_t, index_t, raft::row_major>(
-      out_idx_d.data(), params.n_rows, params.top_k);
+      out_idx_d.data(), params.n_queries, params.top_k);
 
     brute_force::search_with_filtering(handle, dataset, queries, filter, out_idx, out_val);
 
     ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
                                            out_idx.data_handle(),
-                                           params.n_rows * params.top_k,
+                                           params.n_queries * params.top_k,
                                            raft::Compare<index_t>(),
                                            stream));
 
     ASSERT_TRUE(raft::devArrMatch<value_t>(out_val_expected_d.data(),
                                            out_val.data_handle(),
-                                           params.n_rows * params.top_k,
+                                           params.n_queries * params.top_k,
                                            CompareApproxWithInf<value_t>(1e-6f),
                                            stream));
   }

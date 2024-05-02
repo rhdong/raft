@@ -570,9 +570,9 @@ void brute_force_search(
   RAFT_EXPECTS(idx.dataset().extent(1) == queries.extent(1),
                "Number of columns in queries must match brute force index");
 
-  auto k      = neighbors.extent(1);
-  IdxT n_rows = idx.dataset().extent(0);
-  IdxT n_cols = queries.extent(0);
+  IdxT n_queries = queries.extent(0);
+  IdxT n_dataset = idx.dataset().extent(0);
+  auto dim       = idx.dataset().extent(1);
 
   // T* norms = nullptr;
   // if (idx.has_norms()) { norms = const_cast<T*>(idx.norms().data_handle()); }
@@ -582,38 +582,38 @@ void brute_force_search(
   rmm::device_scalar<IdxT> nnz(0, resource::get_cuda_stream(res));
   auto nnz_view = make_device_scalar_view<IdxT>(nnz.data());
   auto filter_view =
-    raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), n_rows * n_cols);
-  raft::detail::popc(res, filter_view, n_rows * n_cols, nnz_view);
+    raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), n_queries * n_dataset);
+  raft::detail::popc(res, filter_view, n_queries * n_dataset, nnz_view);
   raft::copy(&nnz_h, nnz.data(), 1, resource::get_cuda_stream(res));
 
-  // create a owning csr
-  auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_rows, n_cols, nnz_h);
+  // create a owning csr filter
+  auto filter_csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
 
   // fill csr
-  raft::sparse::convert::bitmap_to_csr(res, filter, csr);
+  raft::sparse::convert::bitmap_to_csr(res, filter, filter_csr);
 
-  // create csr_view
-  auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
-                                                                   csr.structure_view());
+  // create filter csr view
+  auto filter_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(filter_csr.get_elements().data(),
+                                                                      filter_csr.structure_view());
 
-  // create idx_view
-  auto idx_view =
-    raft::make_device_matrix_view<const T, IdxT>(idx.dataset().data_handle(), n_rows, k);
+  // create dataset view
+  auto dataset_view =
+    raft::make_device_matrix_view<const T, IdxT>(idx.dataset().data_handle(), n_dataset, dim);
 
   // calc dot
   T alpha = static_cast<T>(1.0f);
   T beta  = static_cast<T>(0.0f);
   raft::sparse::linalg::sddmm(res,
-                              idx_view,
                               queries,
-                              csr_view,
+                              dataset_view,
+                              filter_view,
                               raft::linalg::Operation::NON_TRANSPOSE,
                               raft::linalg::Operation::TRANSPOSE,
                               raft::make_host_scalar_view<T>(&alpha),
                               raft::make_host_scalar_view<T>(&beta));
   // select k
   auto const_csr_view = make_device_csr_matrix_view<const T, IdxT, IdxT, IdxT>(
-    csr.get_elements().data(), csr.structure_view());
+    filter_csr.get_elements().data(), filter_csr.structure_view());
   std::optional<raft::device_vector_view<const IdxT, IdxT>> no_opt = std::nullopt;
   raft::sparse::matrix::select_k(res, const_csr_view, no_opt, distances, neighbors, true, true);
 
