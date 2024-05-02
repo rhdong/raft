@@ -594,7 +594,7 @@ void brute_force_search(
 
   // create filter csr view
   auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
-                                                                      csr.structure_view());
+                                                                   csr.structure_view());
 
   // create dataset view
   auto dataset_view =

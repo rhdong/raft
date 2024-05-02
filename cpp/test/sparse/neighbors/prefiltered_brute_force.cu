@@ -246,7 +246,8 @@ class PrefilteredBruteForceTest
 
   void SetUp() override
   {
-    index_t element = raft::ceildiv(params.n_queries * params.n_dataset, index_t(sizeof(bitmap_t) * 8));
+    index_t element =
+      raft::ceildiv(params.n_queries * params.n_dataset, index_t(sizeof(bitmap_t) * 8));
     std::vector<bitmap_t> filter_h(element);
 
     nnz = create_sparse_matrix(params.n_queries, params.n_dataset, params.sparsity, filter_h);
@@ -345,8 +346,8 @@ class PrefilteredBruteForceTest
 
     auto dataset = brute_force::build(handle, index_params, dataset_raw);
 
-    auto filter = raft::core::bitmap_view(
-      (const bitmap_t*)filter_d.data(), params.n_queries, params.n_dataset);
+    auto filter =
+      raft::core::bitmap_view((const bitmap_t*)filter_d.data(), params.n_queries, params.n_dataset);
 
     auto out_val = raft::make_device_matrix_view<value_t, index_t, raft::row_major>(
       out_val_d.data(), params.n_queries, params.top_k);
