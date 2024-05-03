@@ -201,11 +201,11 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
         if (l_bitmap & (ONE << i)) {
           indices[indptr_row + l_sum] = l_offset + i;
           if constexpr (sizeof(index_t) == 4){
-            printf("%d, ", int(l_offset + i));
+            printf("%d- ", int(l_offset + i));
           }
           
           if constexpr (sizeof(index_t) == 8){
-            printf("%lld, ", int64_t(l_offset + i));
+            printf("%lld- ", int64_t(l_offset + i));
           }
           l_sum++;
         }
