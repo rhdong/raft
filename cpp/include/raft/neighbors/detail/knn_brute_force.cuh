@@ -615,7 +615,7 @@ void brute_force_search(
   auto filter_view =
     raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), n_queries * n_dataset);
   
-  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>(filter.data(), (IdxT)17, 4); 
+  dump_idx_kernel<<<1, 1, 0, stream>>>(filter.data(), (uint32_t)17, 4); 
   raft::detail::popc(res, filter_view, n_queries * n_dataset, nnz_view);
   raft::copy(&nnz_h, nnz.data(), 1, stream);
 
@@ -626,13 +626,13 @@ void brute_force_search(
   // fill csr
   raft::sparse::convert::bitmap_to_csr(res, filter, csr);
   std::cout << "indices3 = " << (void*)(csr.structure_view().get_indices().data()) << std::endl;
-  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr.structure_view().get_indices().data()), IdxT(csr.structure_view().get_indices().size()), 0); 
+  //dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr.structure_view().get_indices().data()), IdxT(csr.structure_view().get_indices().size()), 0); 
 
   // create filter csr view
   auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
                                                                    csr.structure_view());
-  dump_idx_kernel<<<1, 1, 0, stream>>>((csr_view.structure_view().get_indices().data()), (csr_view.structure_view().get_indices().size()), 1); 
-  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr_view.structure_view().get_indptr().data()), IdxT(csr_view.structure_view().get_indptr().size()), 2); 
+  //dump_idx_kernel<<<1, 1, 0, stream>>>((csr_view.structure_view().get_indices().data()), (csr_view.structure_view().get_indices().size()), 1); 
+  //dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr_view.structure_view().get_indptr().data()), IdxT(csr_view.structure_view().get_indptr().size()), 2); 
 
   // create dataset view
   auto dataset_view =
