@@ -60,7 +60,7 @@ void dump_vector(const std::vector<T>& vec, const std::string& name)
 {
   std::cout << "Dumping vector " << name << " (" << vec.size() << " elements):" << std::endl;
   for (size_t i = 0; i < vec.size(); ++i) {
-    std::cout << name << "[" << i << "] = " << vec[i] << std::endl;
+    // std::cout << name << "[" << i << "] = " << vec[i] << std::endl;
   }
 }
 
