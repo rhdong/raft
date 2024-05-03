@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "../../test_utils.cuh"
 #include "../../neighbors/knn_utils.cuh"
+#include "../../test_utils.cuh"
 
 #include <raft/core/bitmap.cuh>
 #include <raft/core/device_csr_matrix.hpp>
@@ -405,7 +405,7 @@ class PrefilteredBruteForceTest
                                                        params.n_queries,
                                                        params.top_k,
                                                        0.001f,
-                                                       stream_,
+                                                       stream,
                                                        true));
   }
 
