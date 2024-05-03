@@ -626,12 +626,12 @@ void brute_force_search(
                               raft::linalg::Operation::TRANSPOSE,
                               raft::make_host_scalar_view<T>(&alpha),
                               raft::make_host_scalar_view<T>(&beta));
-  return;
   // select k
   auto const_csr_view = make_device_csr_matrix_view<const T, IdxT, IdxT, IdxT>(
     csr.get_elements().data(), csr.structure_view());
   std::optional<raft::device_vector_view<const IdxT, IdxT>> no_opt = std::nullopt;
   raft::sparse::matrix::select_k(res, const_csr_view, no_opt, distances, neighbors, true, true);
+  return;
   dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(), IdxT(distances.size()),"d_distances"); 
   // dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(),
   // IdxT(distances.size()), "distances");
