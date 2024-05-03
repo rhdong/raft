@@ -278,8 +278,8 @@ void bitmap_to_csr(raft::resources const& handle,
       &nnz, indptr + csr_view.get_n_rows(), sizeof(index_t), cudaMemcpyDeviceToHost, stream));
     resource::sync_stream(handle);
     csr.initialize_sparsity(nnz);
+    std::cout << "nnz:" << nnz << std::endl;
   }
-  std::cout << "nnz:" << nnz <<std::endl;
   index_t* indices = csr_view.get_indices().data();
   constexpr bool check_nnz = is_device_csr_sparsity_preserving_v<csr_matrix_t>;
   fill_indices_by_rows<bitmap_t, index_t, typename csr_matrix_t::nnz_type, check_nnz>(
