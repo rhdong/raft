@@ -613,7 +613,7 @@ void brute_force_search(
   rmm::device_scalar<IdxT> nnz(0, stream);
   auto nnz_view = make_device_scalar_view<IdxT>(nnz.data());
   auto filter_view =
-    raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), n_queries * n_dataset);
+    raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), filter.n_elements());
   
   dump_idx_kernel<<<1, 1, 0, stream>>>(filter.data(), (uint32_t)17, 4); 
   raft::detail::popc(res, filter_view, n_queries * n_dataset, nnz_view);
