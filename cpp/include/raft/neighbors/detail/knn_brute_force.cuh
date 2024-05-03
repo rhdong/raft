@@ -623,6 +623,7 @@ void brute_force_search(
 
   // fill csr
   raft::sparse::convert::bitmap_to_csr(res, filter, csr);
+  std::cout << "indices3 = " << (void*)(csr.structure_view().get_indices().data()) << std::endl;
   dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr.structure_view().get_indices().data()), IdxT(csr.structure_view().get_indices().size()), 0); 
 
   // create filter csr view
