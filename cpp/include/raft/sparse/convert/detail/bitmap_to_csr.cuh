@@ -301,10 +301,10 @@ void bitmap_to_csr(raft::resources const& handle,
     csr_view.get_nnz(),
     indices);
 
-  thrust::fill_n(thrust_policy,
+  /*thrust::fill_n(thrust_policy,
                  csr.get_elements().data(),
                  csr_view.get_nnz(),
-                 typename csr_matrix_t::element_type(1));
+                 typename csr_matrix_t::element_type(1));*/
 }
 
 };  // end NAMESPACE detail
