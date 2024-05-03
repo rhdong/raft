@@ -200,11 +200,11 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
       for (int i = 0; i < BITS_PER_BITMAP; i++) {
         if (l_bitmap & (ONE << i)) {
           indices[indptr_row + l_sum] = l_offset + i;
-          if constexpr (sizeof(index_t) == 4){
+          if constexpr (sizeof(index_t) == 4) {
             printf("[%d]%d- ", int(indptr_row + l_sum), int(l_offset + i));
           }
-          
-          if constexpr (sizeof(index_t) == 8){
+
+          if constexpr (sizeof(index_t) == 8) {
             printf("[%lld]%lld- ", int64_t(indptr_row + l_sum), int64_t(l_offset + i));
           }
           l_sum++;
@@ -272,7 +272,7 @@ void bitmap_to_csr(raft::resources const& handle,
   auto thrust_policy = resource::get_thrust_policy(handle);
   auto stream        = resource::get_cuda_stream(handle);
 
-  index_t* indptr  = csr_view.get_indptr().data();
+  index_t* indptr = csr_view.get_indptr().data();
 
   RAFT_CUDA_TRY(cudaMemsetAsync(indptr, 0, (csr_view.get_n_rows() + 1) * sizeof(index_t), stream));
 
@@ -290,8 +290,8 @@ void bitmap_to_csr(raft::resources const& handle,
     std::cout << "nnz:" << nnz << std::endl;
   }
   index_t* indices = csr_view.get_indices().data();
-  std::cout << "indices2 = " << (void*) indices << std::endl;
-  std::cout << "get_elements = " << (void*) (csr.get_elements().data()) << std::endl;
+  std::cout << "indices2 = " << (void*)indices << std::endl;
+  std::cout << "get_elements = " << (void*)(csr.get_elements().data()) << std::endl;
   constexpr bool check_nnz = is_device_csr_sparsity_preserving_v<csr_matrix_t>;
   fill_indices_by_rows<bitmap_t, index_t, typename csr_matrix_t::nnz_type, check_nnz>(
     handle,

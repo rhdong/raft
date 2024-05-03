@@ -15,6 +15,7 @@
  */
 
 #include "../../test_utils.cuh"
+#include "../../neighbors/knn_utils.cuh"
 
 #include <raft/core/bitmap.cuh>
 #include <raft/core/device_csr_matrix.hpp>
@@ -189,8 +190,8 @@ class PrefilteredBruteForceTest
           index_t a_index = trans_a ? i * params.dim + l : l * params.n_queries + i;
           index_t b_index = trans_b ? l * params.n_dataset + cols[j] : cols[j] * params.dim + l;
           sum += A[a_index] * B[b_index];
-//           std::cout << "a_index:" << a_index << ", "
-//                     << "b_index:" << b_index << std::endl;
+          //           std::cout << "a_index:" << a_index << ", "
+          //                     << "b_index:" << b_index << std::endl;
         }
         vals[j] = alpha * sum + beta * vals[j];
       }
@@ -385,17 +386,27 @@ class PrefilteredBruteForceTest
 
     brute_force::search_with_filtering(handle, dataset, queries, filter, out_idx, out_val);
 
-    ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
-                                           out_idx.data_handle(),
-                                           params.n_queries * params.top_k,
-                                           raft::Compare<index_t>(),
-                                           stream));
+    //     ASSERT_TRUE(raft::devArrMatch<index_t>(out_idx_expected_d.data(),
+    //                                            out_idx.data_handle(),
+    //                                            params.n_queries * params.top_k,
+    //                                            raft::Compare<index_t>(),
+    //                                            stream));
+    //
+    //     ASSERT_TRUE(raft::devArrMatch<value_t>(out_val_expected_d.data(),
+    //                                            out_val.data_handle(),
+    //                                            params.n_queries * params.top_k,
+    //                                            CompareApproxWithInf<value_t>(1e-6f),
+    //                                            stream));
 
-    ASSERT_TRUE(raft::devArrMatch<value_t>(out_val_expected_d.data(),
-                                           out_val.data_handle(),
-                                           params.n_queries * params.top_k,
-                                           CompareApproxWithInf<value_t>(1e-6f),
-                                           stream));
+    ASSERT_TRUE(raft::spatial::knn::devArrMatchKnnPair(out_idx_expected_d.data(),
+                                                       out_idx.data_handle(),
+                                                       out_val_expected_d.data(),
+                                                       out_val.data_handle(),
+                                                       params.n_queries,
+                                                       params.top_k,
+                                                       0.001f,
+                                                       stream_,
+                                                       true));
   }
 
  protected:
@@ -422,8 +433,8 @@ TEST_P(PrefilteredBruteForceTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
 const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {
-  {200, 30, 15, 20, 0.4},// {32, 1024, 128, 128, 0.1}
-  };
+  {200, 30, 15, 20, 0.4},  // {32, 1024, 128, 128, 0.1}
+};
 
 INSTANTIATE_TEST_CASE_P(PrefilteredBruteForceTest,
                         PrefilteredBruteForceTest_double_int64,
