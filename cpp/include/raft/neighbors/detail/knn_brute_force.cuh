@@ -582,7 +582,6 @@ void brute_force_search(
   RAFT_EXPECTS(neighbors.extent(1) == distances.extent(1), "Value of k must match for outputs");
   RAFT_EXPECTS(idx.dataset().extent(1) == queries.extent(1),
                "Number of columns in queries must match brute force index");
-  return;
 
   IdxT n_queries = queries.extent(0);
   IdxT n_dataset = idx.dataset().extent(0);
@@ -601,6 +600,7 @@ void brute_force_search(
     raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), n_queries * n_dataset);
   raft::detail::popc(res, filter_view, n_queries * n_dataset, nnz_view);
   raft::copy(&nnz_h, nnz.data(), 1, stream);
+  return;
 
   // create a owning csr filter
   auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
