@@ -291,6 +291,7 @@ void bitmap_to_csr(raft::resources const& handle,
   }
   index_t* indices = csr_view.get_indices().data();
   std::cout << "indices2 = " << (void*) indices << std::endl;
+  std::cout << "get_elements = " << (void*) (csr.get_elements().data()) << std::endl;
   constexpr bool check_nnz = is_device_csr_sparsity_preserving_v<csr_matrix_t>;
   fill_indices_by_rows<bitmap_t, index_t, typename csr_matrix_t::nnz_type, check_nnz>(
     handle,
@@ -301,10 +302,10 @@ void bitmap_to_csr(raft::resources const& handle,
     csr_view.get_nnz(),
     indices);
 
-  /*thrust::fill_n(thrust_policy,
+  thrust::fill_n(thrust_policy,
                  csr.get_elements().data(),
                  csr_view.get_nnz(),
-                 typename csr_matrix_t::element_type(1));*/
+                 typename csr_matrix_t::element_type(1));
 }
 
 };  // end NAMESPACE detail
