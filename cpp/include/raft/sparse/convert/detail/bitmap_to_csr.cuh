@@ -255,7 +255,7 @@ void bitmap_to_csr(raft::resources const& handle,
                    raft::core::bitmap_view<bitmap_t, index_t> bitmap,
                    csr_matrix_t& csr)
 {
-  auto csr_view = csr.structure_view();
+  auto& csr_view = csr.structure_view();
 
   if (csr_view.get_n_rows() == 0 || csr_view.get_n_cols() == 0 || csr_view.get_nnz() == 0) {
     return;
