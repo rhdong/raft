@@ -279,6 +279,8 @@ void bitmap_to_csr(raft::resources const& handle,
   calc_nnz_by_rows(handle, bitmap.data(), csr_view.get_n_rows(), csr_view.get_n_cols(), indptr);
   thrust::exclusive_scan(thrust_policy, indptr, indptr + csr_view.get_n_rows() + 1, indptr);
 
+  std::cout << "indices1 = " << (void*)(csr_view.get_indices().data()) << std::endl;
+
   if constexpr (is_device_csr_sparsity_owning_v<csr_matrix_t>) {
     index_t nnz = 0;
     RAFT_CUDA_TRY(cudaMemcpyAsync(
@@ -288,6 +290,7 @@ void bitmap_to_csr(raft::resources const& handle,
     std::cout << "nnz:" << nnz << std::endl;
   }
   index_t* indices = csr_view.get_indices().data();
+  std::cout << "indices2 = " << (void*) indices << std::endl;
   constexpr bool check_nnz = is_device_csr_sparsity_preserving_v<csr_matrix_t>;
   fill_indices_by_rows<bitmap_t, index_t, typename csr_matrix_t::nnz_type, check_nnz>(
     handle,
