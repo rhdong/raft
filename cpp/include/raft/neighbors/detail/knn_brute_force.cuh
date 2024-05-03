@@ -629,7 +629,7 @@ void brute_force_search(
   // create filter csr view
   auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
                                                                    csr.structure_view());
-  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr_view.structure_view().get_indices().data()), IdxT(csr_view.structure_view().get_indices().size()), 1); 
+  dump_idx_kernel<<<1, 1, 0, stream>>>((csr_view.structure_view().get_indices().data()), (csr_view.structure_view().get_indices().size()), 1); 
   dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr_view.structure_view().get_indptr().data()), IdxT(csr_view.structure_view().get_indptr().size()), 2); 
 
   // create dataset view
