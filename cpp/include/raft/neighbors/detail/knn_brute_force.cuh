@@ -556,6 +556,16 @@ void brute_force_search(
                                          query_norms ? query_norms->data_handle() : nullptr);
 }
 
+template <typename T>
+__global__ void dump_array_kernel(T* array, int size, const char* name)
+{
+  printf("device: %s\n", name);
+  for (int i = 0; i < size; i++) {
+    printf("%d, ", array[tid]);
+  }
+  printf("\n");
+}
+
 template <typename T, typename IdxT, typename BitmapT>
 void brute_force_search(
   raft::resources const& res,
@@ -574,17 +584,19 @@ void brute_force_search(
   IdxT n_dataset = idx.dataset().extent(0);
   auto dim       = idx.dataset().extent(1);
 
+  auto stream = resource::get_cuda_stream(res);
+
   // T* norms = nullptr;
   // if (idx.has_norms()) { norms = const_cast<T*>(idx.norms().data_handle()); }
 
   // calc nnz
   IdxT nnz_h = 0;
-  rmm::device_scalar<IdxT> nnz(0, resource::get_cuda_stream(res));
+  rmm::device_scalar<IdxT> nnz(0, stream);
   auto nnz_view = make_device_scalar_view<IdxT>(nnz.data());
   auto filter_view =
     raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), n_queries * n_dataset);
   raft::detail::popc(res, filter_view, n_queries * n_dataset, nnz_view);
-  raft::copy(&nnz_h, nnz.data(), 1, resource::get_cuda_stream(res));
+  raft::copy(&nnz_h, nnz.data(), 1, stream);
 
   // create a owning csr filter
   auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
@@ -616,6 +628,8 @@ void brute_force_search(
     csr.get_elements().data(), csr.structure_view());
   std::optional<raft::device_vector_view<const IdxT, IdxT>> no_opt = std::nullopt;
   raft::sparse::matrix::select_k(res, const_csr_view, no_opt, distances, neighbors, true, true);
+  dump_array_kernel<<<1, 1, 0, stream>>>(neighbors.data_handle(), neighbors, "neighbors");
+  dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(), distances, "distances");
 
   // post process
   /*auto metric    = idx.metric();

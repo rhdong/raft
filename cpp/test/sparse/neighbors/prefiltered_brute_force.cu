@@ -37,9 +37,9 @@
 #include <optional>
 #include <queue>
 #include <random>
+#include <string>
 #include <unordered_set>
 #include <vector>
-#include <string>
 
 namespace raft::neighbors::brute_force {
 
@@ -54,14 +54,14 @@ struct PrefilteredBruteForceInputs {
   bool select_min                     = true;
 };
 
-template<typename T>
-void dump_vector(const std::vector<T>& vec, const std::string& name) {
-    std::cout << "Dumping vector " << name << " (" << vec.size() << " elements):" << std::endl;
-    for (size_t i = 0; i < vec.size(); ++i) {
-        std::cout << name << "[" << i << "] = " << vec[i] << std::endl;
-    }
+template <typename T>
+void dump_vector(const std::vector<T>& vec, const std::string& name)
+{
+  std::cout << "Dumping vector " << name << " (" << vec.size() << " elements):" << std::endl;
+  for (size_t i = 0; i < vec.size(); ++i) {
+    std::cout << name << "[" << i << "] = " << vec[i] << std::endl;
+  }
 }
-
 
 template <typename T>
 struct CompareApproxWithInf {
@@ -189,7 +189,8 @@ class PrefilteredBruteForceTest
           index_t a_index = trans_a ? i * params.dim + l : l * params.n_queries + i;
           index_t b_index = trans_b ? l * params.n_dataset + cols[j] : cols[j] * params.dim + l;
           sum += A[a_index] * B[b_index];
-          std::cout << "a_index:" << a_index << ", " << "b_index:" << b_index << std::endl;
+          std::cout << "a_index:" << a_index << ", "
+                    << "b_index:" << b_index << std::endl;
         }
         vals[j] = alpha * sum + beta * vals[j];
       }
@@ -333,7 +334,7 @@ class PrefilteredBruteForceTest
     out_idx_d.resize(params.n_queries * params.top_k, stream);
 
     update_device(out_val_d.data(), out_val_h.data(), out_val_h.size(), stream);
-    update_device(out_idx_d.data(), out_idx_d.data(), out_idx_d.size(), stream);
+    update_device(out_idx_d.data(), out_idx_h.data(), out_idx_h.size(), stream);
     update_device(filter_d.data(), filter_h.data(), filter_h.size(), stream);
 
     resource::sync_stream(handle);
@@ -355,7 +356,7 @@ class PrefilteredBruteForceTest
     out_idx_expected_d.resize(params.n_queries * params.top_k, stream);
 
     update_device(out_val_expected_d.data(), out_val_h.data(), out_val_h.size(), stream);
-    update_device(out_idx_expected_d.data(), out_idx_d.data(), out_idx_d.size(), stream);
+    update_device(out_idx_expected_d.data(), out_idx_h.data(), out_idx_h.size(), stream);
 
     resource::sync_stream(handle);
   }
@@ -365,7 +366,7 @@ class PrefilteredBruteForceTest
     auto dataset_raw = raft::make_device_matrix_view<const value_t, index_t, raft::row_major>(
       (const value_t*)dataset_d.data(), params.n_dataset, params.dim);
 
-    auto queries = raft::make_device_matrix_view<const value_t, index_t>(
+    auto queries = raft::make_device_matrix_view<const value_t, index_t, raft::row_major>(
       (const value_t*)queries_d.data(), params.n_queries, params.dim);
 
     brute_force::index_params index_params{};
