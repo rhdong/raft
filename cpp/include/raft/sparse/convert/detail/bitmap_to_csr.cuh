@@ -266,7 +266,6 @@ void bitmap_to_csr(raft::resources const& handle,
   auto stream        = resource::get_cuda_stream(handle);
 
   index_t* indptr  = csr_view.get_indptr().data();
-  index_t* indices = csr_view.get_indices().data();
 
   RAFT_CUDA_TRY(cudaMemsetAsync(indptr, 0, (csr_view.get_n_rows() + 1) * sizeof(index_t), stream));
 
@@ -280,6 +279,7 @@ void bitmap_to_csr(raft::resources const& handle,
     resource::sync_stream(handle);
     csr.initialize_sparsity(nnz);
   }
+  index_t* indices = csr_view.get_indices().data();
   constexpr bool check_nnz = is_device_csr_sparsity_preserving_v<csr_matrix_t>;
   fill_indices_by_rows<bitmap_t, index_t, typename csr_matrix_t::nnz_type, check_nnz>(
     handle,
