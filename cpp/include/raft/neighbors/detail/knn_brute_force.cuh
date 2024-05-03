@@ -534,7 +534,7 @@ __global__ void dump_idx_kernel(T* array, IdxT size, int id)
   printf("device: %d\n", id);
   for (IdxT i = 0; i < size; i++) {
   	if constexpr (sizeof(T) == 4){
-  	  printf("%d, ", array[i]);
+  	  printf("%u, ", uint32_t(array[i]));
     }
 	
   	if constexpr (sizeof(T) == 8){
@@ -614,6 +614,8 @@ void brute_force_search(
   auto nnz_view = make_device_scalar_view<IdxT>(nnz.data());
   auto filter_view =
     raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), n_queries * n_dataset);
+  
+  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>(filter.data(), (IdxT)17, 4); 
   raft::detail::popc(res, filter_view, n_queries * n_dataset, nnz_view);
   raft::copy(&nnz_h, nnz.data(), 1, stream);
 
