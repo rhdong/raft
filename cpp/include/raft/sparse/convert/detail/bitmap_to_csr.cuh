@@ -297,16 +297,16 @@ void bitmap_to_csr(raft::resources const& handle,
     handle,
     bitmap.data(),
     indptr,
-    csr_view.get_n_rows(),
-    csr_view.get_n_cols(),
-    csr_view.get_nnz(),
+    csr.structure_view().get_n_rows(),
+    csr.structure_view().get_n_cols(),
+    csr.structure_view().get_nnz(),
     indices);
 
   std::cout << "csr_view.get_nnz() = " << csr.structure_view().get_nnz() << std::endl;
 
   thrust::fill_n(thrust_policy,
                  csr.get_elements().data(),
-                 csr_view.get_nnz(),
+                 csr.structure_view().get_nnz(),
                  typename csr_matrix_t::element_type(1));
 }
 
