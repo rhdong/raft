@@ -302,6 +302,8 @@ void bitmap_to_csr(raft::resources const& handle,
     csr_view.get_nnz(),
     indices);
 
+  std::cout << "csr_view.get_nnz() = " << csr_view.get_nnz() << std::endl;
+
   thrust::fill_n(thrust_policy,
                  csr.get_elements().data(),
                  csr_view.get_nnz(),
