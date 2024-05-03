@@ -610,18 +610,18 @@ void brute_force_search(
   auto filter_view =
     raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), filter.n_elements());
 
-  dump_idx_kernel<<<1, 1, 0, stream>>>(filter.data(), (uint32_t)17, 4);
+  // dump_idx_kernel<<<1, 1, 0, stream>>>(filter.data(), (uint32_t)17, 4);
   raft::detail::popc(res, filter_view, n_queries * n_dataset, nnz_view);
   raft::copy(&nnz_h, nnz.data(), 1, stream);
 
   // create a owning csr filter
-  std::cout << "n_queries:" << n_queries << ", n_dataset:" << n_dataset << ", nnz_h:" << nnz_h
-            << std::endl;
+  // std::cout << "n_queries:" << n_queries << ", n_dataset:" << n_dataset << ", nnz_h:" << nnz_h
+  //          << std::endl;
   auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
 
   // fill csr
   raft::sparse::convert::bitmap_to_csr(res, filter, csr);
-  std::cout << "indices3 = " << (void*)(csr.structure_view().get_indices().data()) << std::endl;
+  //std::cout << "indices3 = " << (void*)(csr.structure_view().get_indices().data()) << std::endl;
   // dump_idx_kernel<IdxT, IdxT><<<1, 1, 0,
   // stream>>>((IdxT*)(csr.structure_view().get_indices().data()),
   // IdxT(csr.structure_view().get_indices().size()), 0);
@@ -654,7 +654,7 @@ void brute_force_search(
     csr.get_elements().data(), csr.structure_view());
   std::optional<raft::device_vector_view<const IdxT, IdxT>> no_opt = std::nullopt;
   raft::sparse::matrix::select_k(res, const_csr_view, no_opt, distances, neighbors, true, true);
-  dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(), IdxT(distances.size()), 3);
+  //dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(), IdxT(distances.size()), 3);
   return;
   // dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(),
   // IdxT(distances.size()), "distances");

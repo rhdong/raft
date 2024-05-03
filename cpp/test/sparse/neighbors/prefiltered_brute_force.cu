@@ -433,7 +433,7 @@ TEST_P(PrefilteredBruteForceTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
 const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {
-  {200, 30, 15, 20, 0.4},  // {32, 1024, 128, 128, 0.1}
+  {1000, 10000, 2050, 16, 0.4},  // {32, 1024, 128, 128, 0.1}
 };
 
 INSTANTIATE_TEST_CASE_P(PrefilteredBruteForceTest,
