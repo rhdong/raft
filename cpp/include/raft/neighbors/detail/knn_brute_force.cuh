@@ -606,7 +606,6 @@ void brute_force_search(
 
   // fill csr
   raft::sparse::convert::bitmap_to_csr(res, filter, csr);
-  return;
 
   // create filter csr view
   auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
@@ -627,6 +626,7 @@ void brute_force_search(
                               raft::linalg::Operation::TRANSPOSE,
                               raft::make_host_scalar_view<T>(&alpha),
                               raft::make_host_scalar_view<T>(&beta));
+  return;
   // select k
   auto const_csr_view = make_device_csr_matrix_view<const T, IdxT, IdxT, IdxT>(
     csr.get_elements().data(), csr.structure_view());
