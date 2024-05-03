@@ -533,7 +533,13 @@ __global__ void dump_idx_kernel(T* array, IdxT size, const char* name)
 {
   printf("device: %s\n", name);
   for (IdxT i = 0; i < size; i++) {
-  	printf("%lld, ", array[i]);
+  	if constexpr (sizeof(T) == 4){
+  	  printf("%d, ", array[i]);
+    }
+	
+  	if constexpr (sizeof(T) == 8){
+  	  printf("%lld, ", int64_t(array[i]));
+    }
   }
   printf("\n");
 }
