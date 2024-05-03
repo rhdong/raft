@@ -600,13 +600,13 @@ void brute_force_search(
     raft::make_device_vector_view<const BitmapT, IdxT>(filter.data(), n_queries * n_dataset);
   raft::detail::popc(res, filter_view, n_queries * n_dataset, nnz_view);
   raft::copy(&nnz_h, nnz.data(), 1, stream);
-  return;
 
   // create a owning csr filter
   auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
 
   // fill csr
   raft::sparse::convert::bitmap_to_csr(res, filter, csr);
+  return;
 
   // create filter csr view
   auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
