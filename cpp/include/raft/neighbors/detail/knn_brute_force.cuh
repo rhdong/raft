@@ -564,7 +564,7 @@ __global__ void dump_array_kernel(T* array, IdxT size, const char* name)
   printf("device: %s\n", name);
   for (IdxT i = 0; i < size; i++) {
   	if constexpr (std::is_integral_v<T>){
-      printf("%d, ", array[i]);
+      printf("%lld, ", array[i]);
     } else {
       printf("%f, ", array[i]);
 	}
