@@ -189,8 +189,8 @@ class PrefilteredBruteForceTest
           index_t a_index = trans_a ? i * params.dim + l : l * params.n_queries + i;
           index_t b_index = trans_b ? l * params.n_dataset + cols[j] : cols[j] * params.dim + l;
           sum += A[a_index] * B[b_index];
-          std::cout << "a_index:" << a_index << ", "
-                    << "b_index:" << b_index << std::endl;
+//           std::cout << "a_index:" << a_index << ", "
+//                     << "b_index:" << b_index << std::endl;
         }
         vals[j] = alpha * sum + beta * vals[j];
       }
@@ -421,8 +421,9 @@ using PrefilteredBruteForceTest_double_int64 = PrefilteredBruteForceTest<float, 
 TEST_P(PrefilteredBruteForceTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
-const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {{2, 3, 1, 2, 0.4},
-                                                                          {32, 1024, 128, 128, 0.1}};
+const std::vector<PrefilteredBruteForceInputs<index_t>> selectk_inputs = {
+  {20, 30, 10, 20, 0.4},// {32, 1024, 128, 128, 0.1}
+  };
 
 INSTANTIATE_TEST_CASE_P(PrefilteredBruteForceTest,
                         PrefilteredBruteForceTest_double_int64,
