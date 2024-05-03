@@ -519,9 +519,9 @@ void brute_force_knn_impl(
 #include <type_traits>
 
 template <typename T, typename IdxT>
-__global__ void dump_array_kernel(T* array, IdxT size, const char* name)
+__global__ void dump_array_kernel(T* array, IdxT size, int id)
 {
-  printf("device: %s\n", name);
+  printf("device: %d\n", id);
   for (IdxT i = 0; i < size; i++) {
   	printf("%f, ", array[i]);
   }
@@ -529,9 +529,9 @@ __global__ void dump_array_kernel(T* array, IdxT size, const char* name)
 }
 
 template <typename T, typename IdxT>
-__global__ void dump_idx_kernel(T* array, IdxT size, const char* name)
+__global__ void dump_idx_kernel(T* array, IdxT size, int id)
 {
-  printf("device: %s\n", name);
+  printf("device: %d\n", id);
   for (IdxT i = 0; i < size; i++) {
   	if constexpr (sizeof(T) == 4){
   	  printf("%d, ", array[i]);
@@ -627,8 +627,8 @@ void brute_force_search(
   // create filter csr view
   auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
                                                                    csr.structure_view());
-  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr.structure_view().get_indices().data()), IdxT(csr.structure_view().get_indices().size()),"d get_indices"); 
-  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr.structure_view().get_indptr().data()), IdxT(csr.structure_view().get_indptr().size()),"d get_indptr"); 
+  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr.structure_view().get_indices().data()), IdxT(csr.structure_view().get_indices().size()), 1); 
+  dump_idx_kernel<IdxT, IdxT><<<1, 1, 0, stream>>>((IdxT*)(csr.structure_view().get_indptr().data()), IdxT(csr.structure_view().get_indptr().size()), 2); 
 
   // create dataset view
   auto dataset_view =
