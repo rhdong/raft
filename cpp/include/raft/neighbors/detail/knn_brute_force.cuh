@@ -556,25 +556,6 @@ void brute_force_search(
                                          query_norms ? query_norms->data_handle() : nullptr);
 }
 
-#include <type_traits>
-
-template <typename T, typename IdxT>
-__global__ void dump_array_kernel(T* array, IdxT size, const char* name)
-{
-  printf("device: %s\n", name);
-  for (IdxT i = 0; i < size; i++) {
-  	if constexpr (std::is_same<T, int>::value){
-      printf("%d, ", array[i]);
-    }
-	if constexpr (std::is_same<T, signed int>::value){
-      printf("%lld, ", array[i]);
-    } else {
-      printf("%f, ", array[i]);
-	}
-  }
-  printf("\n");
-}
-
 template <typename T, typename IdxT, typename BitmapT>
 void brute_force_search(
   raft::resources const& res,
@@ -637,8 +618,8 @@ void brute_force_search(
     csr.get_elements().data(), csr.structure_view());
   std::optional<raft::device_vector_view<const IdxT, IdxT>> no_opt = std::nullopt;
   raft::sparse::matrix::select_k(res, const_csr_view, no_opt, distances, neighbors, true, true);
-  dump_array_kernel<<<1, 1, 0, stream>>>(neighbors.data_handle(), IdxT(neighbors.size()), "neighbors");
-  dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(), IdxT(distances.size()), "distances");
+  //dump_array_kernel<<<1, 1, 0, stream>>>(neighbors.data_handle(), IdxT(neighbors.size()), "neighbors");
+  //dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(), IdxT(distances.size()), "distances");
 
   // post process
   /*auto metric    = idx.metric();
