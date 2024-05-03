@@ -565,8 +565,8 @@ __global__ void dump_array_kernel(T* array, IdxT size, const char* name)
   for (IdxT i = 0; i < size; i++) {
   	if constexpr (std::is_same<T, int>::value){
       printf("%d, ", array[i]);
-    } else {
-  	else if constexpr (std::is_same<T, signed int>::value){
+    }
+	if constexpr (std::is_same<T, signed int>::value){
       printf("%lld, ", array[i]);
     } else {
       printf("%f, ", array[i]);
