@@ -528,6 +528,16 @@ __global__ void dump_array_kernel(T* array, IdxT size, const char* name)
   printf("\n");
 }
 
+template <typename T, typename IdxT>
+__global__ void dump_idx_kernel(T* array, IdxT size, const char* name)
+{
+  printf("device: %s\n", name);
+  for (IdxT i = 0; i < size; i++) {
+  	printf("%lld, ", array[i]);
+  }
+  printf("\n");
+}
+
 
 template <typename T, typename IdxT>
 void brute_force_search(
@@ -602,6 +612,7 @@ void brute_force_search(
   raft::copy(&nnz_h, nnz.data(), 1, stream);
 
   // create a owning csr filter
+  std::cout << "n_queries:" << n_queries << ", n_dataset:" << n_dataset << std::endl;
   auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
 
   // fill csr
@@ -610,6 +621,8 @@ void brute_force_search(
   // create filter csr view
   auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
                                                                    csr.structure_view());
+  dump_idx_kernel<<<1, 1, 0, stream>>>(csr_view.get_indices.data(), IdxT(csr_view.get_indices.size()),"d get_indices"); 
+  dump_idx_kernel<<<1, 1, 0, stream>>>(csr_view.get_indptr.data(), IdxT(csr_view.get_indptr.size()),"d get_indptr"); 
 
   // create dataset view
   auto dataset_view =
