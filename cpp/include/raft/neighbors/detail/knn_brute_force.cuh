@@ -556,6 +556,8 @@ void brute_force_search(
                                          query_norms ? query_norms->data_handle() : nullptr);
 }
 
+#include <type_traits>
+
 template <typename T, typename IdxT>
 __global__ void dump_array_kernel(T* array, IdxT size, const char* name)
 {
