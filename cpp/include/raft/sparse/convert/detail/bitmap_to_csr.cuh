@@ -200,6 +200,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
       for (int i = 0; i < BITS_PER_BITMAP; i++) {
         if (l_bitmap & (ONE << i)) {
           indices[indptr_row + l_sum] = l_offset + i;
+		  printf("%d-", l_offset + i);
           l_sum++;
         }
       }
