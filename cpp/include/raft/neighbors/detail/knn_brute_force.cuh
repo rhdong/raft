@@ -618,7 +618,7 @@ void brute_force_search(
   raft::copy(&nnz_h, nnz.data(), 1, stream);
 
   // create a owning csr filter
-  std::cout << "n_queries:" << n_queries << ", n_dataset:" << n_dataset << std::endl;
+  std::cout << "n_queries:" << n_queries << ", n_dataset:" << n_dataset ", nnz_h:" << nnz_h << std::endl;
   auto csr = raft::make_device_csr_matrix<T, IdxT>(res, n_queries, n_dataset, nnz_h);
 
   // fill csr
