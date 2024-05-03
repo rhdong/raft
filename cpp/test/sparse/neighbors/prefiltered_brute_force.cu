@@ -150,12 +150,12 @@ class PrefilteredBruteForceTest
         if (((element >> bit_position) & 1)) {
           indices[offset_values] = static_cast<index_t>(j);
           offset_values++;
-          std::cout << 1 << ", ";
+          // std::cout << 1 << ", ";
         } else {
-          std::cout << 0 << ", ";
+          // std::cout << 0 << ", ";
         }
-        std::cout << std::endl;
       }
+      std::cout << std::endl;
       indptr[offset_indptr++] = static_cast<index_t>(offset_values);
     }
     dump_vector(bitmap, "bitmap");
