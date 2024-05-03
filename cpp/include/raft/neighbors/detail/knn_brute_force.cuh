@@ -561,7 +561,7 @@ __global__ void dump_array_kernel(T* array, int size, const char* name)
 {
   printf("device: %s\n", name);
   for (int i = 0; i < size; i++) {
-    printf("%d, ", array[tid]);
+    printf("%d, ", array[i]);
   }
   printf("\n");
 }
