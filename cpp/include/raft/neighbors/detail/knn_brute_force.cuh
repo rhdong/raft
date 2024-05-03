@@ -516,6 +516,19 @@ void brute_force_knn_impl(
   if (translations == nullptr) delete id_ranges;
 };
 
+#include <type_traits>
+
+template <typename T, typename IdxT>
+__global__ void dump_array_kernel(T* array, IdxT size, const char* name)
+{
+  printf("device: %s\n", name);
+  for (IdxT i = 0; i < size; i++) {
+  	printf("%f, ", array[i]);
+  }
+  printf("\n");
+}
+
+
 template <typename T, typename IdxT>
 void brute_force_search(
   raft::resources const& res,
@@ -618,7 +631,7 @@ void brute_force_search(
     csr.get_elements().data(), csr.structure_view());
   std::optional<raft::device_vector_view<const IdxT, IdxT>> no_opt = std::nullopt;
   raft::sparse::matrix::select_k(res, const_csr_view, no_opt, distances, neighbors, true, true);
-  // dump_array_kernel<<<1, 1, 0, stream>>>(neighbors.data_handle(), IdxT(neighbors.size()),
+  dump_array_kernel<<<1, 1, 0, stream>>>(neighbors.data_handle(), IdxT(neighbors.size()),
   // "neighbors"); dump_array_kernel<<<1, 1, 0, stream>>>(distances.data_handle(),
   // IdxT(distances.size()), "distances");
 
