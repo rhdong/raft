@@ -17,7 +17,7 @@
 #pragma once
 
 #include <raft/core/bitset.hpp>
-#include <raft/core/detail/mdspan_util.cuh>  // native_popc
+#include <raft/core/detail/popc.cuh>
 #include <raft/core/device_container_policy.hpp>
 #include <raft/core/device_mdarray.hpp>
 #include <raft/core/resource/thrust_policy.hpp>

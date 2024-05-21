@@ -193,6 +193,7 @@ if(BUILD_TESTS)
     ext_headers/raft_neighbors_refine.cu
     ext_headers/raft_neighbors_detail_ivf_flat_search.cu
     ext_headers/raft_linalg_detail_coalesced_reduction.cu
+    ext_headers/raft_sparse_matrix_detail_select_k.cu
     ext_headers/raft_spatial_knn_detail_ball_cover_registers.cu
     ext_headers/raft_neighbors_detail_ivf_flat_interleaved_scan.cu
     ext_headers/raft_neighbors_detail_ivf_pq_compute_similarity.cu
@@ -338,6 +339,7 @@ if(BUILD_TESTS)
     sparse/neighbors/cross_component_nn.cu
     sparse/neighbors/brute_force.cu
     sparse/neighbors/knn_graph.cu
+    sparse/neighbors/prefiltered_brute_force.cu
     LIB
     EXPLICIT_INSTANTIATE_ONLY
   )
