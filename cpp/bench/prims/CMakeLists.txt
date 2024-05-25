@@ -146,27 +146,6 @@ if(BUILD_PRIMS_BENCH)
     NEIGHBORS_BENCH
     PATH
     neighbors/knn/brute_force_filter_float_int64_t.cu
-    neighbors/knn/brute_force_float_int64_t.cu
-    neighbors/knn/brute_force_float_uint32_t.cu
-    neighbors/knn/cagra_float_uint32_t.cu
-    neighbors/knn/ivf_flat_filter_float_int64_t.cu
-    neighbors/knn/ivf_flat_float_int64_t.cu
-    neighbors/knn/ivf_flat_int8_t_int64_t.cu
-    neighbors/knn/ivf_flat_uint8_t_int64_t.cu
-    neighbors/knn/ivf_pq_float_int64_t.cu
-    neighbors/knn/ivf_pq_filter_float_int64_t.cu
-    neighbors/knn/ivf_pq_int8_t_int64_t.cu
-    neighbors/knn/ivf_pq_uint8_t_int64_t.cu
-    ${RAFT_SOURCE_DIR}/src/neighbors/detail/ivf_pq_search_filtering_float_int64_t.cu
-    ${RAFT_SOURCE_DIR}/src/neighbors/detail/ivf_pq_compute_similarity_float_float_bitset64.cu
-    ${RAFT_SOURCE_DIR}/src/neighbors/detail/ivf_pq_compute_similarity_float_fp8_false_bitset64.cu
-    ${RAFT_SOURCE_DIR}/src/neighbors/detail/ivf_pq_compute_similarity_float_fp8_true_bitset64.cu
-    ${RAFT_SOURCE_DIR}/src/neighbors/detail/ivf_pq_compute_similarity_float_half_bitset64.cu
-    ${RAFT_SOURCE_DIR}/src/neighbors/detail/ivf_pq_compute_similarity_half_fp8_false_bitset64.cu
-    ${RAFT_SOURCE_DIR}/src/neighbors/detail/ivf_pq_compute_similarity_half_fp8_true_bitset64.cu
-    ${RAFT_SOURCE_DIR}/src/neighbors/detail/ivf_pq_compute_similarity_half_half_bitset64.cu
-    neighbors/refine_float_int64_t.cu
-    neighbors/refine_uint8_t_int64_t.cu
     main.cpp
     OPTIONAL
     LIB
