@@ -604,7 +604,7 @@ const std::vector<params> kInputsBruteForceFilter = raft::util::itertools::produ
   {size_t(256)},                                       // n_dim
   {size_t(1),  size_t(10),  size_t(100), size_t(1000)},  // n_queries
   {size_t(256)},                                        // k
-  {0.99, 0.8},                                    // removed_ratio
+  {0.99, 0.8, 0.0},                                    // removed_ratio
   {raft::distance::DistanceType::InnerProduct});
 
 inline const std::vector<TransferStrategy> kAllStrategies{
