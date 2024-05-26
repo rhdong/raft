@@ -694,6 +694,7 @@ void brute_force_search(
                                                       compressed_csr_view.get_n_rows(),
                                                       dim);
   }
+  return;
 
   // post process
   std::optional<device_vector<T, IdxT>> query_norms_;
@@ -735,7 +736,7 @@ void brute_force_search(
       idx.norms().data_handle(),
       metric);
   }
-
+	  
   // select k
   auto const_csr_view = make_device_csr_matrix_view<const T, IdxT, IdxT, IdxT>(
     csr.get_elements().data(), compressed_csr_view);
