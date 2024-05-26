@@ -658,7 +658,13 @@ void brute_force_search(
 
   // create filter csr view
   auto compressed_csr_view = csr.structure_view();
-  if (n_queries > 10) {
+  rmm::device_uvector<IdxT> rows(compressed_csr_view.get_nnz(), stream);
+  raft::sparse::convert::csr_to_coo(compressed_csr_view.get_indptr().data(),
+                                    compressed_csr_view.get_n_rows(),
+                                    rows.data(),
+                                    compressed_csr_view.get_nnz(),
+                                    stream);
+  if (n_queries > 100000) {
     auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
                                                                      compressed_csr_view);
 
@@ -719,12 +725,6 @@ void brute_force_search(
                               raft::identity_op{});
       }
     }
-    rmm::device_uvector<IdxT> rows(compressed_csr_view.get_nnz(), stream);
-    raft::sparse::convert::csr_to_coo(compressed_csr_view.get_indptr().data(),
-                                      compressed_csr_view.get_n_rows(),
-                                      rows.data(),
-                                      compressed_csr_view.get_nnz(),
-                                      stream);
     raft::sparse::distance::detail::epilogue_on_csr(
       res,
       csr.get_elements().data(),
