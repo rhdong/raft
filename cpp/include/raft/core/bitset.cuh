@@ -84,11 +84,6 @@ bitset<bitset_t, index_t>::bitset(const raft::resources& res,
   reset(res, default_value);
 }
 
-template <typename bitset_t, typename index_t>
-index_t bitset<bitset_t, index_t>::n_elements() const
-{
-  return raft::ceildiv(bitset_len_, bitset_element_size);
-}
 
 template <typename bitset_t, typename index_t>
 void bitset<bitset_t, index_t>::resize(const raft::resources& res,
