@@ -153,6 +153,7 @@ void faster_dot_on_csr(raft::resources const& handle,
                        const value_idx* cols,
                        const value_t* A,
                        const value_t* B,
+                       const value_idx n_rows,
                        const value_idx dim)
 {
   auto stream = resource::get_cuda_stream(handle);
