@@ -624,6 +624,7 @@ void brute_force_search(
   raft::copy(&nnz_h, nnz.data(), 1, stream);
 
   resource::sync_stream(res, stream);
+  return;
   float sparsity = (1.0f * nnz_h / (1.0f * n_queries * n_dataset));
 
   /*if (sparsity > 0.011f) {
@@ -655,7 +656,6 @@ void brute_force_search(
 
   // fill csr
   raft::sparse::convert::bitmap_to_csr(res, filter, csr);
-  return;
 
   // create filter csr view
   auto compressed_csr_view = csr.structure_view();
