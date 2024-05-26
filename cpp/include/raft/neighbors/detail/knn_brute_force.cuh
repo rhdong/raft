@@ -655,6 +655,7 @@ void brute_force_search(
 
   // fill csr
   raft::sparse::convert::bitmap_to_csr(res, filter, csr);
+  return;
 
   // create filter csr view
   auto compressed_csr_view = csr.structure_view();
@@ -664,7 +665,6 @@ void brute_force_search(
                                     rows.data(),
                                     compressed_csr_view.get_nnz(),
                                     stream);
-  return;
   if (n_queries > 10) {
     auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
                                                                      compressed_csr_view);
