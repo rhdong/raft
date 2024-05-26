@@ -46,6 +46,12 @@ _RAFT_HOST_DEVICE bool bitset_view<bitset_t, index_t>::operator[](const index_t 
 }
 
 template <typename bitset_t, typename index_t>
+_RAFT_HOST_DEVICE inline index_t bitset_view<bitset_t, index_t>::n_elements() const
+{
+  return raft::ceildiv(bitset_len_, bitset_element_size);
+}
+
+template <typename bitset_t, typename index_t>
 _RAFT_HOST_DEVICE void bitset_view<bitset_t, index_t>::set(const index_t sample_index,
                                                            bool set_value) const
 {

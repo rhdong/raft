@@ -89,10 +89,7 @@ struct bitset_view {
   /**
    * @brief Get the number of elements used by the bitset representation.
    */
-  inline _RAFT_HOST_DEVICE auto n_elements() const -> index_t{
- 
-    return raft::ceildiv(bitset_len_, bitset_element_size);
-  }
+  inline _RAFT_HOST_DEVICE auto n_elements() const -> index_t;
 
   inline auto to_mdspan() -> raft::device_vector_view<bitset_t, index_t>
   {
