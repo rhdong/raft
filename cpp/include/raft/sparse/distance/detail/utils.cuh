@@ -160,34 +160,74 @@ template <typename value_idx, typename value_t>
 void faster_dot_on_csr(raft::resources const& handle,
                        value_t* dot,
                        const value_idx nnz,
-                       const value_idx* rows,
+                       const value_idx* indptr,
                        const value_idx* cols,
                        const value_t* A,
                        const value_t* B,
                        const value_idx n_rows,
                        const value_idx dim)
 {
+  if (nnz == 0 || n_rows == 0) return;
+
   auto stream = resource::get_cuda_stream(handle);
 
-  int blocks = int(nnz);
+  constexpr value_idx MAX_ROW_PER_ITER = 500;
+  int dev_id, sm_count, blocks_per_sm;
+
+  const int smem_size = dim * sizeof(value_t);
+  cudaGetDevice(&dev_id);
+  cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev_id);
+
   if (dim < 128) {
     constexpr int tpb = 64;
-    faster_dot_on_csr_kernel<value_idx, value_t, tpb>
-      <<<blocks, tpb, 0, stream>>>(dot, rows, cols, A, B, nnz, n_rows, dim);
+    cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &blocks_per_sm, faster_dot_on_csr_kernel<value_idx, value_t>, tpb, smem_size);
+    auto block_x = std::min(n_rows, MAX_ROW_PER_ITER);
+    auto block_y =
+      (std::min(value_idx(blocks_per_sm * sm_count * 16), nnz) + block_x - 1) / block_x;
+    dim3 blocks(block_x, block_y, 1);
+
+    faster_dot_on_csr_kernel<value_idx, value_t>
+      <<<blocks, tpb, smem_size, stream>>>(dot, indptr, cols, A, B, nnz, n_rows, dim);
+
   } else if (dim < 256) {
     constexpr int tpb = 128;
-    faster_dot_on_csr_kernel<value_idx, value_t, tpb>
-      <<<blocks, tpb, 0, stream>>>(dot, rows, cols, A, B, nnz, n_rows, dim);
+    cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &blocks_per_sm, faster_dot_on_csr_kernel<value_idx, value_t>, tpb, smem_size);
+    auto block_x = std::min(n_rows, MAX_ROW_PER_ITER);
+    auto block_y =
+      (std::min(value_idx(blocks_per_sm * sm_count * 16), nnz) + block_x - 1) / block_x;
+    dim3 blocks(block_x, block_y, 1);
+
+    faster_dot_on_csr_kernel<value_idx, value_t>
+      <<<blocks, tpb, smem_size, stream>>>(dot, indptr, cols, A, B, nnz, n_rows, dim);
   } else if (dim < 512) {
     constexpr int tpb = 256;
-    faster_dot_on_csr_kernel<value_idx, value_t, tpb>
-      <<<blocks, tpb, 0, stream>>>(dot, rows, cols, A, B, nnz, n_rows, dim);
+    cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &blocks_per_sm, faster_dot_on_csr_kernel<value_idx, value_t>, tpb, smem_size);
+    auto block_x = std::min(n_rows, MAX_ROW_PER_ITER);
+    auto block_y =
+      (std::min(value_idx(blocks_per_sm * sm_count * 16), nnz) + block_x - 1) / block_x;
+    dim3 blocks(block_x, block_y, 1);
+
+    faster_dot_on_csr_kernel<value_idx, value_t>
+      <<<blocks, tpb, smem_size, stream>>>(dot, indptr, cols, A, B, nnz, n_rows, dim);
   } else {
     constexpr int tpb = 512;
-    faster_dot_on_csr_kernel<value_idx, value_t, tpb>
-      <<<blocks, tpb, 0, stream>>>(dot, rows, cols, A, B, nnz, n_rows, dim);
+    cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &blocks_per_sm, faster_dot_on_csr_kernel<value_idx, value_t>, tpb, smem_size);
+    auto block_x = std::min(n_rows, MAX_ROW_PER_ITER);
+    auto block_y =
+      (std::min(value_idx(blocks_per_sm * sm_count * 16), nnz) + block_x - 1) / block_x;
+    dim3 blocks(block_x, block_y, 1);
+
+    faster_dot_on_csr_kernel<value_idx, value_t>
+      <<<blocks, tpb, smem_size, stream>>>(dot, indptr, cols, A, B, nnz, n_rows, dim);
   }
+
+  RAFT_CUDA_TRY(cudaPeekAtLastError());
 }
+
 }  // namespace detail
 }  // namespace distance
 }  // namespace sparse
