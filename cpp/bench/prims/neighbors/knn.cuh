@@ -603,7 +603,7 @@ const std::vector<params> kInputsBruteForceFilter = raft::util::itertools::produ
   {size_t(1 * 1024 * 1024)},         // n_samples
   {size_t(256)},                                       // n_dim
   {size_t(10)},  // n_queries
-  {size_t(10)},                                        // k
+  {size_t(256)},                                        // k
   {0.99},                                    // removed_ratio
   {raft::distance::DistanceType::InnerProduct});
 
