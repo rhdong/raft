@@ -664,7 +664,7 @@ void brute_force_search(
                                     rows.data(),
                                     compressed_csr_view.get_nnz(),
                                     stream);
-  if (n_queries > 100000) {
+  if (n_queries > 0) {
     auto csr_view = make_device_csr_matrix_view<T, IdxT, IdxT, IdxT>(csr.get_elements().data(),
                                                                      compressed_csr_view);
 
