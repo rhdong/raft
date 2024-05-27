@@ -101,9 +101,9 @@ void faster_dot_on_csr(value_t* dot,
 // 主程序
 int main()
 {
-    const int64_t n_rows = 1;
+    const int64_t n_rows = 100;
     const int64_t n_cols = 10000000;
-    float sparsity       = 0.01;
+    float sparsity       = 0.2;
     int64_t nnz          = (int64_t)(n_rows * n_cols * sparsity);
 
     int64_t run_times = 1;
