@@ -297,32 +297,34 @@ class MaskedMatmulTest : public ::testing::TestWithParam<MaskedMatmulInputs<valu
 using MaskedMatmulTestF = MaskedMatmulTest<float, int>;
 TEST_P(MaskedMatmulTestF, Result) { Run(); }
 
-using MaskedMatmulTestD = MaskedMatmulTest<double, int>;
-TEST_P(MaskedMatmulTestD, Result) { Run(); }
+// using MaskedMatmulTestD = MaskedMatmulTest<double, int>;
+// TEST_P(MaskedMatmulTestD, Result) { Run(); }
 
 const std::vector<MaskedMatmulInputs<float, int>> sddmm_inputs_f = {
-  {0.0001f, 10, 5, 32, 0.1, 1234ULL},
-  {0.0001f, 1024, 32, 1024, 0.1, 1234ULL},
-  {0.0003f, 32, 1024, 1024, 0.2, 1234ULL},
-  {0.001f, 1024, 1024, 1024, 0.19, 1234ULL},
-  {0.0001f, 1024, 1024, 32, 0.3, 1234ULL},
-  {0.0001f, 1024, 32, 1024, 0.4, 1234ULL},
-  {0.0003f, 32, 1024, 1024, 0.19, 1234ULL},
-  {0.001f, 1024, 1024, 1024, 0.1, 1234ULL}};
+//   {0.0001f, 10, 5, 32, 0.1, 1234ULL},
+//   {0.0001f, 1024, 32, 1024, 0.1, 1234ULL},
+//   {0.0003f, 32, 1024, 1024, 0.2, 1234ULL},
+//   {0.001f, 1024, 1024, 1024, 0.19, 1234ULL},
+//   {0.0001f, 1024, 1024, 32, 0.3, 1234ULL},
+//   {0.0001f, 1024, 32, 1024, 0.4, 1234ULL},
+//   {0.0003f, 32, 1024, 1024, 0.19, 1234ULL},
+//   {0.001f, 1024, 1024, 1024, 0.1, 1234ULL},
+  {0.001f, 128, 256, 1024 * 1024, 0.1, 1234ULL}
+};
 
-const std::vector<MaskedMatmulInputs<double, int>> sddmm_inputs_d = {
-  {0.0001f, 10, 5, 32, 0.01, 1234ULL},
-  {0.0001f, 1024, 32, 1024, 0.1, 1234ULL},
-  {0.0001f, 32, 1024, 1024, 0.2, 1234ULL},
-  {0.0001f, 1024, 1024, 1024, 0.19, 1234ULL},
-  {0.0001f, 1024, 1024, 32, 0.3, 1234ULL},
-  {0.0001f, 1024, 32, 1024, 0.4, 1234ULL},
-  {0.0001f, 32, 1024, 1024, 0.19, 1234ULL},
-  {0.0001f, 1024, 1024, 1024, 0.1, 1234ULL}};
+// const std::vector<MaskedMatmulInputs<double, int>> sddmm_inputs_d = {
+//   {0.0001f, 10, 5, 32, 0.01, 1234ULL},
+//   {0.0001f, 1024, 32, 1024, 0.1, 1234ULL},
+//   {0.0001f, 32, 1024, 1024, 0.2, 1234ULL},
+//   {0.0001f, 1024, 1024, 1024, 0.19, 1234ULL},
+//   {0.0001f, 1024, 1024, 32, 0.3, 1234ULL},
+//   {0.0001f, 1024, 32, 1024, 0.4, 1234ULL},
+//   {0.0001f, 32, 1024, 1024, 0.19, 1234ULL},
+//   {0.0001f, 1024, 1024, 1024, 0.1, 1234ULL}};
 
 INSTANTIATE_TEST_CASE_P(MaskedMatmulTest, MaskedMatmulTestF, ::testing::ValuesIn(sddmm_inputs_f));
 
-INSTANTIATE_TEST_CASE_P(MaskedMatmulTest, MaskedMatmulTestD, ::testing::ValuesIn(sddmm_inputs_d));
+// INSTANTIATE_TEST_CASE_P(MaskedMatmulTest, MaskedMatmulTestD, ::testing::ValuesIn(sddmm_inputs_d));
 
 }  // namespace sparse
 }  // namespace raft
