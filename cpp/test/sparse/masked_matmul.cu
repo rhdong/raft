@@ -309,7 +309,7 @@ const std::vector<MaskedMatmulInputs<float, int>> sddmm_inputs_f = {
 //   {0.0001f, 1024, 32, 1024, 0.4, 1234ULL},
 //   {0.0003f, 32, 1024, 1024, 0.19, 1234ULL},
 //   {0.001f, 1024, 1024, 1024, 0.1, 1234ULL},
-  {0.001f, 128, 256, 1024 * 1024, 0.1, 1234ULL}
+  {0.001f, 1, 256, 1024 * 1024, 0.1, 1234ULL}
 };
 
 // const std::vector<MaskedMatmulInputs<double, int>> sddmm_inputs_d = {
