@@ -31,7 +31,7 @@ template <typename bitmap_t, typename index_t>
 _RAFT_HOST_DEVICE inline bool bitmap_view<bitmap_t, index_t>::test(const index_t row,
                                                                    const index_t col) const
 {
-  return bitset_view<bitmap_t, index_t>::test(row * cols_ + col);
+  return test(row * cols_ + col);
 }
 
 template <typename bitmap_t, typename index_t>
@@ -39,7 +39,7 @@ _RAFT_HOST_DEVICE void bitmap_view<bitmap_t, index_t>::set(const index_t row,
                                                            const index_t col,
                                                            bool new_value) const
 {
-  bitset_view<bitmap_t, index_t>::set(row * cols_ + col, new_value);
+  set(row * cols_ + col, new_value);
 }
 
 }  // end namespace raft::core

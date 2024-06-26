@@ -113,7 +113,7 @@ if(BUILD_TESTS)
     NAME
     CORE_TEST
     PATH
-    core/bitmap.cu
+    core/bitset.cu
     test.cpp
     LIB
     EXPLICIT_INSTANTIATE_ONLY
