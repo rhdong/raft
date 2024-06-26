@@ -364,8 +364,8 @@ class BitmapToCSRTest : public ::testing::TestWithParam<BitmapToCSRInputs<index_
   {
     auto bitmap =
       raft::core::bitmap_view<bitmap_t, index_t>(bitmap_d.data(), params.n_rows, params.n_cols);
-
-    bitmap.set(0, 0, true);
+    bool new_value = true;
+    bitmap.set((index_t)0, (index_t)0, new_value);
 
     if (params.owning) {
       auto csr =
