@@ -42,8 +42,6 @@ namespace raft::core {
 template <typename bitmap_t = uint32_t, typename index_t = uint32_t>
 struct bitmap_view : public bitset_view<bitmap_t, index_t> {
 
-  using bitset_view<bitmap_t, index_t>::set;
-  using bitset_view<bitmap_t, index_t>::test;
 
   static_assert((std::is_same<typename std::remove_const<bitmap_t>::type, uint32_t>::value ||
                  std::is_same<typename std::remove_const<bitmap_t>::type, uint64_t>::value),
