@@ -39,7 +39,7 @@ struct test_spec_bitmap {
 
 auto operator<<(std::ostream& os, const test_spec_bitmap& ss) -> std::ostream&
 {
-  os << "bitmap{bitmap_len: " << ss.bitmap_len << ", mask_len: " << ss.mask_len
+  os << "bitmap{n_rows: " << ss.n_rows << ", n_cols: " << ss.n_cols << ", mask_len: " << ss.mask_len
      << ", query_len: " << ss.query_len << "}";
   return os;
 }
@@ -95,8 +95,8 @@ class BitmapTest : public testing::TestWithParam<test_spec_bitmap> {
  public:
   explicit BitmapTest()
     : spec(testing::TestWithParam<test_spec_bitmap>::GetParam()),
-      bitmap_result(raft::ceildiv(spec.bitmap_len, uint64_t(bitmap_element_size))),
-      bitmap_ref(raft::ceildiv(spec.bitmap_len, uint64_t(bitmap_element_size)))
+      bitmap_result(raft::ceildiv(spec.n_rows * spec.n_cols, uint64_t(bitmap_element_size))),
+      bitmap_ref(raft::ceildiv(spec.n_rows * spec.n_cols, uint64_t(bitmap_element_size)))
   {
   }
 
@@ -108,13 +108,14 @@ class BitmapTest : public testing::TestWithParam<test_spec_bitmap> {
     raft::random::RngState rng(42);
     auto mask_device = raft::make_device_vector<index_t, index_t>(res, spec.mask_len);
     std::vector<index_t> mask_cpu(spec.mask_len);
-    raft::random::uniformInt(res, rng, mask_device.view(), index_t(0), index_t(spec.bitmap_len));
+    raft::random::uniformInt(
+      res, rng, mask_device.view(), index_t(0), index_t(spec.n_rows * spec.n_cols));
     update_host(mask_cpu.data(), mask_device.data_handle(), mask_device.extent(0), stream);
     resource::sync_stream(res, stream);
 
     // calculate the results
     auto my_bitmap = raft::core::bitmap<bitmap_t, index_t>(
-      res, raft::make_const_mdspan(mask_device.view()), index_t(spec.bitmap_len));
+      res, raft::make_const_mdspan(mask_device.view()), index_t(spec.n_rows), index_t(spec.n_cols));
     update_host(bitmap_result.data(), my_bitmap.data(), bitmap_result.size(), stream);
 
     // calculate the reference
@@ -129,7 +130,8 @@ class BitmapTest : public testing::TestWithParam<test_spec_bitmap> {
     auto result_ref    = std::vector<uint8_t>(spec.query_len);
 
     // Create queries and verify the test results
-    raft::random::uniformInt(res, rng, query_device.view(), index_t(0), index_t(spec.bitmap_len));
+    raft::random::uniformInt(
+      res, rng, query_device.view(), index_t(0), index_t(spec.n_rows * spec.n_cols));
     update_host(query_cpu.data(), query_device.data_handle(), query_device.extent(0), stream);
     my_bitmap.test(res, raft::make_const_mdspan(query_device.view()), result_device.view());
     update_host(result_cpu.data(), result_device.data_handle(), result_device.extent(0), stream);
@@ -138,7 +140,8 @@ class BitmapTest : public testing::TestWithParam<test_spec_bitmap> {
     ASSERT_TRUE(hostVecMatch(result_cpu, result_ref, Compare<uint8_t>()));
 
     // Add more sample to the bitmap and re-test
-    raft::random::uniformInt(res, rng, mask_device.view(), index_t(0), index_t(spec.bitmap_len));
+    raft::random::uniformInt(
+      res, rng, mask_device.view(), index_t(0), index_t(spec.n_rows * spec.n_cols));
     update_host(mask_cpu.data(), mask_device.data_handle(), mask_device.extent(0), stream);
     resource::sync_stream(res, stream);
     my_bitmap.set(res, mask_device.view());
@@ -151,7 +154,7 @@ class BitmapTest : public testing::TestWithParam<test_spec_bitmap> {
     // Flip the bitmap and re-test
     auto bitmap_count = my_bitmap.count(res);
     my_bitmap.flip(res);
-    ASSERT_EQ(my_bitmap.count(res), spec.bitmap_len - bitmap_count);
+    ASSERT_EQ(my_bitmap.count(res), spec.n_rows * spec.n_cols - bitmap_count);
     update_host(bitmap_result.data(), my_bitmap.data(), bitmap_result.size(), stream);
     flip_cpu_bitmap(bitmap_ref);
     resource::sync_stream(res, stream);
