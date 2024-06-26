@@ -114,8 +114,10 @@ class BitmapTest : public testing::TestWithParam<test_spec_bitmap> {
     resource::sync_stream(res, stream);
 
     // calculate the results
+    auto my_bitset = raft::core::bitset<bitset_t, index_t>(
+      res, raft::make_const_mdspan(mask_device.view()), index_t(spec.bitset_len));
     auto my_bitmap = raft::core::bitmap<bitmap_t, index_t>(
-      res, raft::make_const_mdspan(mask_device.view()), index_t(spec.n_rows), index_t(spec.n_cols));
+      my_bitset.view(), index_t(spec.n_rows), index_t(spec.n_cols));
     update_host(bitmap_result.data(), my_bitmap.data(), bitmap_result.size(), stream);
 
     // calculate the reference
