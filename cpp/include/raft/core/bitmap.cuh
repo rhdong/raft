@@ -31,7 +31,7 @@ template <typename bitmap_t, typename index_t>
 _RAFT_HOST_DEVICE inline bool bitmap_view<bitmap_t, index_t>::test(const index_t row,
                                                                    const index_t col) const
 {
-  return test(row * cols_ + col);
+  return bitset_view<bitmap_t, index_t>::test(row * cols_ + col);
 }
 
 template <typename bitmap_t, typename index_t>
