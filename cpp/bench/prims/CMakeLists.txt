@@ -105,13 +105,8 @@ if(BUILD_PRIMS_BENCH)
     NAME
     DISTANCE_BENCH
     PATH
-    distance/distance_cosine.cu
-    distance/distance_exp_l2.cu
+    distance/distance_inner.cu
     distance/distance_l1.cu
-    distance/distance_unexp_l2.cu
-    distance/fused_l2_nn.cu
-    distance/masked_nn.cu
-    distance/kernels.cu
     main.cpp
     OPTIONAL
     LIB
