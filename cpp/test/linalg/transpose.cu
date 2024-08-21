@@ -331,14 +331,31 @@ void test_transpose_with_mdspan(const TransposeInputs<T>& param)
   }
 }
 
-const std::vector<TransposeInputs<float>> inputs_mdspan_f = {{0.1f, 3, 3, 1234ULL},
-                                                             {0.1f, 3, 4, 1234ULL}};
+const std::vector<TransposeInputs<float>> inputs_mdspan_f  = {{0.1f, 3, 3, 1234ULL},
+                                                              {0.1f, 3, 4, 1234ULL},
+                                                              {0.1f, 300, 300, 1234ULL},
+                                                              {0.1f, 300, 4100, 1234ULL},
+                                                              {0.1f, 1, 13000, 1234ULL},
+                                                              {0.1f, 3, 1300001, 1234ULL}};
+const std::vector<TransposeInputs<double>> inputs_mdspan_d = {{0.1f, 3, 3, 1234ULL},
+                                                              {0.1f, 3, 4, 1234ULL},
+                                                              {0.1f, 300, 300, 1234ULL},
+                                                              {0.1f, 300, 4100, 1234ULL},
+                                                              {0.1f, 1, 13000, 1234ULL},
+                                                              {0.1f, 3, 1300001, 1234ULL}};
 
 TEST(TransposeTest, MDSpanFloat)
 {
   for (const auto& p : inputs_mdspan_f) {
     test_transpose_with_mdspan<float, layout_c_contiguous>(p);
     test_transpose_with_mdspan<float, layout_f_contiguous>(p);
+  }
+}
+TEST(TransposeTest, MDSpanDouble)
+{
+  for (const auto& p : inputs_mdspan_d) {
+    test_transpose_with_mdspan<double, layout_c_contiguous>(p);
+    test_transpose_with_mdspan<double, layout_f_contiguous>(p);
   }
 }
 
