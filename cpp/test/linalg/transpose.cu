@@ -32,88 +32,55 @@
 namespace raft {
 namespace linalg {
 
-template <typename T>
-struct TranposeInputs {
-  T tolerance;
-  int len;
-  int n_row;
-  int n_col;
-  unsigned long long int seed;
-};
-
-template <typename T>
-::std::ostream& operator<<(::std::ostream& os, const TranposeInputs<T>& dims)
+template <typename T, typename IdxT>
+__global__ void dump_array_kernel(T* array, IdxT size, int id)
 {
-  return os;
+  printf("device: %d\n", id);
+  for (IdxT i = 0; i < size; i++) {
+    printf("%d\t%f\n", int(i), float(array[i]));
+  }
+  printf("\n");
 }
 
 template <typename T>
-class TransposeTest : public ::testing::TestWithParam<TranposeInputs<T>> {
- public:
-  TransposeTest()
-    : params(::testing::TestWithParam<TranposeInputs<T>>::GetParam()),
-      stream(resource::get_cuda_stream(handle)),
-      data(params.len, stream),
-      data_trans_ref(params.len, stream),
-      data_trans(params.len, stream)
-  {
-  }
-
- protected:
-  void SetUp() override
-  {
-    int len = params.len;
-    ASSERT(params.len == 9, "This test works only with len=9!");
-    T data_h[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0};
-    raft::update_device(data.data(), data_h, len, stream);
-    T data_ref_h[] = {1.0, 4.0, 7.0, 2.0, 5.0, 8.0, 3.0, 6.0, 9.0};
-    raft::update_device(data_trans_ref.data(), data_ref_h, len, stream);
-
-    transpose(handle, data.data(), data_trans.data(), params.n_row, params.n_col, stream);
-    transpose(data.data(), params.n_row, stream);
-    resource::sync_stream(handle, stream);
-  }
-
- protected:
-  raft::resources handle;
-  cudaStream_t stream;
-
-  TranposeInputs<T> params;
-  rmm::device_uvector<T> data, data_trans, data_trans_ref;
-};
-
-const std::vector<TranposeInputs<float>> inputsf2 = {{0.1f, 3 * 3, 3, 3, 1234ULL}};
-
-const std::vector<TranposeInputs<double>> inputsd2 = {{0.1, 3 * 3, 3, 3, 1234ULL}};
-
-const std::vector<TranposeInputs<half>> inputsh2 = {{0.1, 3 * 3, 3, 3, 1234ULL}};
-
-typedef TransposeTest<float> TransposeTestValF;
-TEST_P(TransposeTestValF, Result)
+void dump_vector(const T* vec, size_t size, const std::string& name)
 {
-  ASSERT_TRUE(raft::devArrMatch(data_trans_ref.data(),
-                                data_trans.data(),
-                                params.len,
-                                raft::CompareApproxAbs<float>(params.tolerance)));
-
-  ASSERT_TRUE(raft::devArrMatch(data_trans_ref.data(),
-                                data.data(),
-                                params.len,
-                                raft::CompareApproxAbs<float>(params.tolerance)));
+  std::cout << "Dumping vector " << name << " (" << size << " elements):" << std::endl;
+  for (size_t i = 0; i < size; ++i) {
+    std::cout << name << "[" << i << "] = " << float(vec[i]) << std::endl;
+  }
 }
 
-typedef TransposeTest<double> TransposeTestValD;
-TEST_P(TransposeTestValD, Result)
+template <typename T>
+void initialize_array(T* data_h, size_t size)
 {
-  ASSERT_TRUE(raft::devArrMatch(data_trans_ref.data(),
-                                data_trans.data(),
-                                params.len,
-                                raft::CompareApproxAbs<double>(params.tolerance)));
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<> dis(0.0, 1.0);
 
-  ASSERT_TRUE(raft::devArrMatch(data_trans_ref.data(),
-                                data.data(),
-                                params.len,
-                                raft::CompareApproxAbs<double>(params.tolerance)));
+  for (size_t i = 0; i < size; ++i) {
+    if constexpr (std::is_same_v<T, half>) {
+      data_h[i] = __float2half(static_cast<float>(dis(gen)));
+    } else {
+      data_h[i] = static_cast<T>(dis(gen));
+    }
+  }
+}
+
+template <typename T>
+void cpu_transpose_col_major(const T* input, T* output, int rows, int cols)
+{
+  for (int i = 0; i < cols; ++i) {
+    for (int j = 0; j < rows; ++j) {
+      output[j * cols + i] = input[i * rows + j];
+    }
+  }
+}
+
+template <typename T>
+void cpu_transpose_row_major(const T* input, T* output, int rows, int cols)
+{
+  cpu_transpose_col_major(input, output, cols, rows);
 }
 
 bool validate_half(const half* h_ref, const half* h_result, half tolerance, int len)
@@ -129,37 +96,148 @@ bool validate_half(const half* h_ref, const half* h_result, half tolerance, int 
   return success;
 }
 
+template <typename T>
+struct TransposeInputs {
+  T tolerance;
+  int n_row;
+  int n_col;
+  unsigned long long int seed;
+};
+
+namespace transpose_regular_test {
+
+template <typename T>
+class TransposeTest : public ::testing::TestWithParam<TransposeInputs<T>> {
+ public:
+  TransposeTest()
+    : params(::testing::TestWithParam<TransposeInputs<T>>::GetParam()),
+      stream(resource::get_cuda_stream(handle)),
+      data(params.n_row * params.n_col, stream),
+      data_trans_ref(params.n_row * params.n_col, stream),
+      data_trans(params.n_row * params.n_col, stream)
+  {
+  }
+
+ protected:
+  void SetUp() override
+  {
+    int len = params.n_row * params.n_col;
+    std::unique_ptr<T[]> data_h(new T[len]);
+    std::unique_ptr<T[]> data_ref_h(new T[len]);
+
+    initialize_array(data_h.get(), len);
+
+    cpu_transpose_col_major(data_h.get(), data_ref_h.get(), params.n_row, params.n_col);
+
+    raft::update_device(data.data(), data_h.get(), len, stream);
+    raft::update_device(data_trans_ref.data(), data_ref_h.get(), len, stream);
+
+    transpose(handle, data.data(), data_trans.data(), params.n_row, params.n_col, stream);
+    if (params.n_row == params.n_col) { transpose(data.data(), params.n_col, stream); }
+    resource::sync_stream(handle, stream);
+  }
+
+ protected:
+  raft::resources handle;
+  cudaStream_t stream;
+
+  TransposeInputs<T> params;
+  rmm::device_uvector<T> data, data_trans, data_trans_ref;
+};
+
+const std::vector<TransposeInputs<float>> inputsf2 = {{0.1f, 3, 3, 1234ULL},
+                                                      {0.1f, 3, 4, 1234ULL},
+                                                      {0.1f, 300, 300, 1234ULL},
+                                                      {0.1f, 300, 4100, 1234ULL},
+                                                      {0.1f, 1, 13000, 1234ULL},
+                                                      {0.1f, 3, 1300001, 1234ULL}};
+
+const std::vector<TransposeInputs<double>> inputsd2 = {{0.1f, 3, 3, 1234ULL},
+                                                       {0.1f, 3, 4, 1234ULL},
+                                                       {0.1f, 300, 300, 1234ULL},
+                                                       {0.1f, 300, 4100, 1234ULL},
+                                                       {0.1f, 1, 13000, 1234ULL},
+                                                       {0.1f, 3, 1300001, 1234ULL}};
+
+const std::vector<TransposeInputs<half>> inputsh2 = {{0.1f, 3, 3, 1234ULL},
+                                                     {0.1f, 3, 4, 1234ULL},
+                                                     {0.1f, 300, 300, 1234ULL},
+                                                     {0.1f, 300, 4100, 1234ULL},
+                                                     {0.1f, 1, 13000, 1234ULL},
+                                                     {0.1f, 3, 1300001, 1234ULL}};
+
+typedef TransposeTest<float> TransposeTestValF;
+TEST_P(TransposeTestValF, Result)
+{
+  ASSERT_TRUE(raft::devArrMatch(data_trans_ref.data(),
+                                data_trans.data(),
+                                params.n_row * params.n_col,
+                                raft::CompareApproxAbs<float>(params.tolerance)));
+
+  if (params.n_row == params.n_col) {
+    ASSERT_TRUE(raft::devArrMatch(data_trans_ref.data(),
+                                  data.data(),
+                                  params.n_row * params.n_col,
+                                  raft::CompareApproxAbs<float>(params.tolerance)));
+  }
+}
+
+typedef TransposeTest<double> TransposeTestValD;
+TEST_P(TransposeTestValD, Result)
+{
+  ASSERT_TRUE(raft::devArrMatch(data_trans_ref.data(),
+                                data_trans.data(),
+                                params.n_row * params.n_col,
+                                raft::CompareApproxAbs<double>(params.tolerance)));
+  if (params.n_row == params.n_col) {
+    ASSERT_TRUE(raft::devArrMatch(data_trans_ref.data(),
+                                  data.data(),
+                                  params.n_row * params.n_col,
+                                  raft::CompareApproxAbs<double>(params.tolerance)));
+  }
+}
+
 typedef TransposeTest<half> TransposeTestValH;
 TEST_P(TransposeTestValH, Result)
 {
-  half data_trans_ref_h[params.len];
-  half data_trans_h[params.len];
-  half data_h[params.len];
+  std::vector<half> data_trans_ref_h(params.n_row * params.n_col);
+  std::vector<half> data_trans_h(params.n_row * params.n_col);
+  std::vector<half> data_h(params.n_row * params.n_col);
 
-  RAFT_CUDA_TRY(cudaMemcpyAsync(data_trans_ref_h,
+  RAFT_CUDA_TRY(cudaMemcpyAsync(data_trans_ref_h.data(),
                                 data_trans_ref.data(),
-                                params.len * sizeof(half),
+                                params.n_row * params.n_col * sizeof(half),
                                 cudaMemcpyDeviceToHost,
                                 stream));
 
-  RAFT_CUDA_TRY(cudaMemcpyAsync(
-    data_trans_h, data_trans.data(), params.len * sizeof(half), cudaMemcpyDeviceToHost, stream));
-  RAFT_CUDA_TRY(cudaMemcpyAsync(
-    data_h, data.data(), params.len * sizeof(half), cudaMemcpyDeviceToHost, stream));
+  RAFT_CUDA_TRY(cudaMemcpyAsync(data_trans_h.data(),
+                                data_trans.data(),
+                                params.n_row * params.n_col * sizeof(half),
+                                cudaMemcpyDeviceToHost,
+                                stream));
+  RAFT_CUDA_TRY(cudaMemcpyAsync(data_h.data(),
+                                data.data(),
+                                params.n_row * params.n_col * sizeof(half),
+                                cudaMemcpyDeviceToHost,
+                                stream));
 
   resource::sync_stream(handle, stream);
 
-  ASSERT_TRUE(validate_half(data_trans_ref_h, data_trans_h, params.tolerance, params.len));
-  ASSERT_TRUE(validate_half(data_trans_ref_h, data_h, params.tolerance, params.len));
+  ASSERT_TRUE(validate_half(
+    data_trans_ref_h.data(), data_trans_h.data(), params.tolerance, params.n_row * params.n_col));
+
+  if (params.n_row == params.n_col) {
+    ASSERT_TRUE(validate_half(
+      data_trans_ref_h.data(), data_h.data(), params.tolerance, params.n_row * params.n_col));
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(TransposeTests, TransposeTestValF, ::testing::ValuesIn(inputsf2));
-
 INSTANTIATE_TEST_SUITE_P(TransposeTests, TransposeTestValD, ::testing::ValuesIn(inputsd2));
-
 INSTANTIATE_TEST_SUITE_P(TransposeTests, TransposeTestValH, ::testing::ValuesIn(inputsh2));
+}  // namespace transpose_regular_test
 
-namespace {
+namespace transpose_mdspan_test {
 /**
  * We hide these functions in tests for now until we have a heterogeneous mdarray
  * implementation.
@@ -229,12 +307,11 @@ template <typename T, typename IndexType>
     return out;
   }
 }
-
 template <typename T, typename LayoutPolicy>
-void test_transpose_with_mdspan()
+void test_transpose_with_mdspan(const TransposeInputs<T>& param)
 {
   raft::resources handle;
-  auto v = make_device_matrix<T, size_t, LayoutPolicy>(handle, 32, 3);
+  auto v = make_device_matrix<T, size_t, LayoutPolicy>(handle, param.n_row, param.n_col);
   T k{0};
   for (size_t i = 0; i < v.extent(0); ++i) {
     for (size_t j = 0; j < v.extent(1); ++j) {
@@ -253,18 +330,18 @@ void test_transpose_with_mdspan()
     }
   }
 }
-}  // namespace
 
-TEST(TransposeTest, MDSpan)
+const std::vector<TransposeInputs<float>> inputs_mdspan_f = {{0.1f, 3, 3, 1234ULL},
+                                                             {0.1f, 3, 4, 1234ULL}};
+
+TEST(TransposeTest, MDSpanFloat)
 {
-  test_transpose_with_mdspan<float, layout_c_contiguous>();
-  test_transpose_with_mdspan<double, layout_c_contiguous>();
-
-  test_transpose_with_mdspan<float, layout_f_contiguous>();
-  test_transpose_with_mdspan<double, layout_f_contiguous>();
+  for (const auto& p : inputs_mdspan_f) {
+    test_transpose_with_mdspan<float, layout_c_contiguous>(p);
+    test_transpose_with_mdspan<float, layout_f_contiguous>(p);
+  }
 }
 
-namespace {
 template <typename T, typename LayoutPolicy>
 void test_transpose_submatrix()
 {
@@ -294,7 +371,6 @@ void test_transpose_submatrix()
     }
   }
 }
-}  // namespace
 
 TEST(TransposeTest, SubMatrix)
 {
@@ -304,5 +380,7 @@ TEST(TransposeTest, SubMatrix)
   test_transpose_submatrix<float, layout_f_contiguous>();
   test_transpose_submatrix<double, layout_f_contiguous>();
 }
+
+}  // namespace transpose_mdspan_test
 }  // end namespace linalg
 }  // end namespace raft
