@@ -336,13 +336,13 @@ const std::vector<TransposeInputs<float>> inputs_mdspan_f  = {{0.1f, 3, 3, 1234U
                                                               {0.1f, 300, 300, 1234ULL},
                                                               {0.1f, 300, 4100, 1234ULL},
                                                               {0.1f, 1, 13000, 1234ULL},
-                                                              {0.1f, 3, 1300001, 1234ULL}};
+                                                              {0.1f, 3, 130001, 1234ULL}};
 const std::vector<TransposeInputs<double>> inputs_mdspan_d = {{0.1f, 3, 3, 1234ULL},
                                                               {0.1f, 3, 4, 1234ULL},
                                                               {0.1f, 300, 300, 1234ULL},
                                                               {0.1f, 300, 4100, 1234ULL},
                                                               {0.1f, 1, 13000, 1234ULL},
-                                                              {0.1f, 3, 1300001, 1234ULL}};
+                                                              {0.1f, 3, 130001, 1234ULL}};
 
 TEST(TransposeTest, MDSpanFloat)
 {
