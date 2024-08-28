@@ -122,16 +122,7 @@ if(BUILD_PRIMS_BENCH)
     NAME
     LINALG_BENCH
     PATH
-    linalg/add.cu
-    linalg/map_then_reduce.cu
     linalg/masked_matmul.cu
-    linalg/matrix_vector_op.cu
-    linalg/norm.cu
-    linalg/normalize.cu
-    linalg/reduce_cols_by_key.cu
-    linalg/reduce_rows_by_key.cu
-    linalg/reduce.cu
-    linalg/sddmm.cu
     main.cpp
   )
 
