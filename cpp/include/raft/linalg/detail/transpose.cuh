@@ -20,6 +20,7 @@
 
 #include <raft/core/device_mdspan.hpp>
 #include <raft/core/resource/cublas_handle.hpp>
+#include <raft/core/resource/cublaslt_handle.hpp>
 #include <raft/core/resource/cuda_stream.hpp>
 #include <raft/core/resources.hpp>
 
@@ -27,6 +28,8 @@
 
 #include <thrust/for_each.h>
 #include <thrust/iterator/counting_iterator.h>
+
+#include <cublasLt.h>
 
 #include <cmath>
 
@@ -97,44 +100,29 @@ void transpose_half(raft::resources const& handle,
                     const IndexType stride_in  = 1,
                     const IndexType stride_out = 1)
 {
-  if (n_cols == 0 || n_rows == 0) return;
-  auto stream = resource::get_cuda_stream(handle);
+  cublasLtHandle_t cublas_handle = raft::resource::get_cublaslt_handle(handle);
 
-  int dev_id, sm_count;
+  half alpha = __float2half(1.0f);
+  half beta  = __float2half(0.0f);
 
-  cudaGetDevice(&dev_id);
-  cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev_id);
+  cublasLtMatrixTransformDesc_t transformDesc;
+  cublasLtMatrixTransformDescCreate(&transformDesc, CUDA_R_16F);
 
-  constexpr int tpb         = 256;
-  constexpr int block_dim_x = 128 / sizeof(half);
-  constexpr int block_dim_y = tpb / block_dim_x;
+  int trans = CUBLAS_OP_T;
+  cublasLtMatrixTransformDescSetAttribute(
+    transformDesc, CUBLASLT_MATRIX_TRANSFORM_DESC_TRANSA, &trans, sizeof(trans));
 
-  dim3 blocks(block_dim_x, block_dim_y);
+  cublasLtMatrixLayout_t matA, matC;
+  cublasLtMatrixLayoutCreate(&matA, CUDA_R_16F, n_cols, n_rows, stride_in > 1 ? stride_in : n_cols);
+  cublasLtMatrixLayoutCreate(
+    &matC, CUDA_R_16F, n_rows, n_cols, stride_out > 1 ? stride_out : n_rows);
 
-  int max_active_blocks = 0;
-  RAFT_CUDA_TRY(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-    &max_active_blocks, transpose_half_kernel<IndexType, block_dim_x, block_dim_y>, tpb, 0));
-  int num_blocks = max_active_blocks * sm_count;
+  cublasLtMatrixTransform(
+    cublas_handle, transformDesc, &alpha, in, matA, &beta, nullptr, nullptr, out, matC, 0);
 
-  int grid_x = (n_cols + block_dim_x - 1) / block_dim_x;
-  int grid_y = (n_rows + block_dim_x - 1) / block_dim_x;
-
-  float ratio = static_cast<float>(grid_y) / static_cast<float>(grid_x);
-  int adjusted_grid_y =
-    std::max(std::min(grid_y, static_cast<int>(std::sqrt(num_blocks * ratio))), 1);
-  int adjusted_grid_x = std::max(std::min(grid_x, num_blocks / adjusted_grid_y), 1);
-
-  dim3 grids(adjusted_grid_x, adjusted_grid_y);
-
-  if (stride_in > 1 || stride_out > 1) {
-    transpose_half_kernel<IndexType, block_dim_x, block_dim_y>
-      <<<grids, blocks, 0, stream>>>(n_rows, n_cols, in, out, stride_in, stride_out);
-  } else {
-    transpose_half_kernel<IndexType, block_dim_x, block_dim_y>
-      <<<grids, blocks, 0, stream>>>(n_rows, n_cols, in, out, n_cols, n_rows);
-  }
-
-  RAFT_CUDA_TRY(cudaPeekAtLastError());
+  cublasLtMatrixLayoutDestroy(matA);
+  cublasLtMatrixLayoutDestroy(matC);
+  cublasLtMatrixTransformDescDestroy(transformDesc);
 }
 
 template <typename math_t>
