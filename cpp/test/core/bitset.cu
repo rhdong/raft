@@ -195,7 +195,7 @@ class BitsetTest : public testing::TestWithParam<test_spec_bitset> {
     ASSERT_TRUE(hostVecMatch(bitset_ref, bitset_result, raft::Compare<bitset_t>()));
 
     // test sparsity, repeat and eval_n_elements
-    if constexpr (std::is_same_v<bitset_t, uint32_t> || std::is_same_v<bitset_t, uint64_t>) {
+    {
       auto my_bitset_view  = my_bitset.view();
       auto sparsity_result = my_bitset_view.sparsity(res);
       auto sparsity_ref    = sparsity_cpu_bitset(bitset_ref, size_t(spec.bitset_len));
