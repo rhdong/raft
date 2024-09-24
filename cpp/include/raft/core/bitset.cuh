@@ -63,6 +63,15 @@ _RAFT_DEVICE void bitset_view<bitset_t, index_t>::set(const index_t sample_index
 }
 
 template <typename bitset_t, typename index_t>
+void bitset_view<bitset_t, index_t>::count(const raft::resources& res,
+                                           raft::device_scalar_view<index_t> count_gpu_scalar) const
+{
+  auto max_len = raft::make_host_scalar_view<const index_t, index_t>(&bitset_len_);
+  auto values  = raft::make_device_vector_view<const bitset_t, index_t>(bitset_ptr_, n_elements());
+  raft::popc(res, values, max_len, count_gpu_scalar);
+}
+
+template <typename bitset_t, typename index_t>
 struct bitset_copy_functor {
   const bitset_t* bitset_ptr;
   bitset_t* output_device_ptr;
@@ -139,23 +148,11 @@ void bitset_view<bitset_t, index_t>::repeat(const raft::resources& res,
 template <typename bitset_t, typename index_t>
 double bitset_view<bitset_t, index_t>::sparsity(const raft::resources& res) const
 {
-  index_t nnz_h  = 0;
   index_t size_h = this->size();
-  auto stream    = raft::resource::get_cuda_stream(res);
-
   if (0 == size_h) { return static_cast<double>(1.0); }
+  index_t count_h = this->count(res);
 
-  rmm::device_scalar<index_t> nnz(0, stream);
-
-  auto vector_view = raft::make_device_vector_view<const bitset_t, index_t>(data(), n_elements());
-  auto nnz_view    = raft::make_device_scalar_view<index_t>(nnz.data());
-  auto size_view   = raft::make_host_scalar_view<index_t>(&size_h);
-
-  raft::popc(res, vector_view, size_view, nnz_view);
-  raft::copy(&nnz_h, nnz.data(), 1, stream);
-
-  raft::resource::sync_stream(res, stream);
-  return static_cast<double>((1.0 * (size_h - nnz_h)) / (1.0 * size_h));
+  return static_cast<double>((1.0 * (size_h - count_h)) / (1.0 * size_h));
 }
 
 template <typename bitset_t, typename index_t>
@@ -253,7 +250,7 @@ template <typename bitset_t, typename index_t>
 void bitset<bitset_t, index_t>::count(const raft::resources& res,
                                       raft::device_scalar_view<index_t> count_gpu_scalar)
 {
-  auto max_len = raft::make_host_scalar_view<index_t>(&bitset_len_);
+  auto max_len = raft::make_host_scalar_view<const index_t, index_t>(&bitset_len_);
   auto values =
     raft::make_device_vector_view<const bitset_t, index_t>(bitset_.data(), n_elements());
   raft::popc(res, values, max_len, count_gpu_scalar);
