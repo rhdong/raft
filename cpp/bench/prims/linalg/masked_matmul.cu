@@ -250,10 +250,10 @@ static std::vector<MaskedMatmulBenchParams<value_t>> getInputs()
   };
 
   const std::vector<TestParams> params_group =
-    raft::util::itertools::product<TestParams>({size_t(10), size_t(1024)},
-                                               {size_t(128), size_t(1024)},
+    raft::util::itertools::product<TestParams>({size_t(10), size_t(20), size_t(100), size_t(500), size_t(1024)},
+                                               {size_t(128), size_t(256), size_t(512), size_t(1024)},
                                                {size_t(1024 * 1024)},
-                                               {0.01f, 0.1f, 0.2f, 0.5f, 1.0f});
+                                               {0.01f, 0.1f, 0.2f, 0.5f});
 
   param_vec.reserve(params_group.size());
   for (TestParams params : params_group) {
