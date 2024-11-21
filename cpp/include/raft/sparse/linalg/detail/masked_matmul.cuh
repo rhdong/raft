@@ -63,7 +63,7 @@ void masked_matmul(raft::resources const& handle,
   auto C_matrix = raft::make_device_csr_matrix<output_t, index_t>(handle, compressed_C_view);
 
   // fill C
-  raft::sparse::convert::bitmap_to_csr(handle, mask, C_matrix);
+  // raft::sparse::convert::bitmap_to_csr(handle, mask, C_matrix);
 
   if (m > 10 || alpha.has_value() || beta.has_value()) {
     auto C_view = raft::make_device_csr_matrix_view<output_t, index_t, index_t, index_t>(
