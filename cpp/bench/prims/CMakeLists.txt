@@ -107,7 +107,7 @@ if(BUILD_PRIMS_BENCH)
   )
 
   ConfigureBench(
-    NAME SPARSE_BENCH PATH sparse/bitmap_to_csr.cu sparse/convert_csr.cu sparse/select_k_csr.cu
+    NAME SPARSE_BENCH PATH sparse/bitmap_to_csr.cu
     main.cpp
   )
 
