@@ -148,7 +148,7 @@ RAFT_DEVICE_INLINE_FUNCTION value_t warp_exclusive_scan(value_t value)
 }
 
 // Threads per block in fill_indices_by_rows_kernel.
-static const constexpr int fill_indices_by_rows_tpb = 32;
+static const constexpr int fill_indices_by_rows_tpb = 512;
 
 template <typename bitmap_t, typename index_t, typename nnz_t, bool check_nnz>
 RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
@@ -160,31 +160,40 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
                               index_t bitmap_num,
                               index_t* indices)
 {
+  using BlockScan   = cub::BlockScan<int, fill_indices_by_rows_tpb>;
+  using BlockReduce = cub::BlockReduce<int, fill_indices_by_rows_tpb>;
+
+  __shared__ typename BlockScan::TempStorage scan_storage;
+  __shared__ typename BlockReduce::TempStorage reduce_storage;
+
   constexpr bitmap_t FULL_MASK      = ~bitmap_t(0u);
   constexpr bitmap_t ONE            = bitmap_t(1u);
   constexpr index_t BITS_PER_BITMAP = sizeof(bitmap_t) * 8;
 
-  int lane_id = threadIdx.x & 0x1f;
+  int tid = threadIdx.x;
+  __shared__ size_t g_sum;
 
   // Ensure the HBM allocated for CSR values is sufficient to handle all non-zero bitmap bits.
   // An assert will trigger if the allocated HBM is insufficient when `NDEBUG` isn't defined.
   // Note: Assertion is active only if `NDEBUG` is undefined.
   if constexpr (check_nnz) {
-    if (lane_id == 0) { assert(nnz < indptr[num_rows]); }
+    if (tid == 0) { assert(nnz < indptr[num_rows]); }
   }
 
 #pragma unroll
   for (index_t row = blockIdx.x; row < num_rows; row += gridDim.x) {
-    index_t g_sum      = 0;
-    index_t s_bit      = row * num_cols;
-    index_t e_bit      = s_bit + num_cols;
-    index_t indptr_row = indptr[row];
+    if (threadIdx.x == 0) { g_sum = 0; }
+    __syncthreads();
+
+    size_t s_bit      = static_cast<size_t>(row) * num_cols;
+    size_t e_bit      = s_bit + num_cols;
+    size_t indptr_row = indptr[row];
 
 #pragma unroll
-    for (index_t offset = 0; offset < num_cols; offset += BITS_PER_BITMAP * warpSize) {
-      index_t bitmap_idx                     = lane_id + (s_bit + offset) / BITS_PER_BITMAP;
+    for (index_t offset = 0; offset < num_cols; offset += BITS_PER_BITMAP * blockDim.x) {
+      size_t bitmap_idx                      = tid + (s_bit + offset) / BITS_PER_BITMAP;
       std::remove_const_t<bitmap_t> l_bitmap = 0;
-      index_t l_offset = offset + lane_id * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP);
+      index_t l_offset = offset + tid * BITS_PER_BITMAP - (s_bit % BITS_PER_BITMAP);
 
       if (bitmap_idx * BITS_PER_BITMAP < e_bit) { l_bitmap = bitmap[bitmap_idx]; }
 
@@ -198,16 +207,22 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
         l_bitmap >>= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
       }
 
-      index_t l_sum =
-        g_sum + warp_exclusive_scan(static_cast<index_t>(raft::detail::popc(l_bitmap)));
+      int l_bits    = static_cast<index_t>(__popc(l_bitmap));
+      int l_sum_32b = 0;
+      BlockScan(scan_storage).ExclusiveSum(l_bits, l_sum_32b);
+      size_t l_sum = g_sum + l_sum_32b;
 
+#pragma unroll
       for (int i = 0; i < BITS_PER_BITMAP; i++) {
         if (l_bitmap & (ONE << i)) {
           indices[indptr_row + l_sum] = l_offset + i;
           l_sum++;
         }
       }
-      g_sum = __shfl_sync(0xffffffff, l_sum, warpSize - 1);
+      int r_sum = BlockReduce(reduce_storage).Reduce(l_bits, cub::Sum());
+
+      if (threadIdx.x == 0) { g_sum += r_sum; }
+      __syncthreads();
     }
   }
 }
@@ -221,9 +236,9 @@ void fill_indices_by_rows(raft::resources const& handle,
                           nnz_t nnz,
                           index_t* indices)
 {
-  auto stream              = resource::get_cuda_stream(handle);
-  const index_t total      = num_rows * num_cols;
-  const index_t bitmap_num = raft::ceildiv(total, index_t(sizeof(bitmap_t) * 8));
+  auto stream             = resource::get_cuda_stream(handle);
+  const size_t total      = num_rows * num_cols;
+  const size_t bitmap_num = raft::ceildiv(total, size_t(sizeof(bitmap_t) * 8));
 
   int dev_id, sm_count, blocks_per_sm;
 
