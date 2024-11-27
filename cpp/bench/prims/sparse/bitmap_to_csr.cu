@@ -160,8 +160,8 @@ const std::vector<bench_param<index_t>> getLargeInputs()
     float sparsity;
   };
 
-  const std::vector<TestParams> params_group = raft::util::itertools::product<TestParams>(
-    {index_t(100)}, {index_t(100 * 1000000)}, {0.05f});
+  const std::vector<TestParams> params_group =
+    raft::util::itertools::product<TestParams>({index_t(100)}, {index_t(100 * 1000000)}, {0.05f});
 
   param_vec.reserve(params_group.size());
   for (TestParams params : params_group) {

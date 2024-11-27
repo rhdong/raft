@@ -21,6 +21,7 @@
 #include <raft/core/resource/thrust_policy.hpp>
 #include <raft/core/resources.hpp>
 #include <raft/sparse/convert/detail/adj_to_csr.cuh>
+#include <raft/util/device_loads_stores.cuh>
 
 #include <rmm/device_uvector.hpp>
 
@@ -185,9 +186,10 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
     if (threadIdx.x == 0) { g_sum = 0; }
     __syncthreads();
 
-    size_t s_bit      = static_cast<size_t>(row) * num_cols;
-    size_t e_bit      = s_bit + num_cols;
-    size_t indptr_row = indptr[row];
+    size_t s_bit                = static_cast<size_t>(row) * num_cols;
+    size_t e_bit                = s_bit + num_cols;
+    size_t indptr_row           = indptr[row];
+    index_t* indices_indptr_row = indices + indptr_row;
 
 #pragma unroll
     for (index_t offset = 0; offset < num_cols; offset += BITS_PER_BITMAP * blockDim.x) {
@@ -207,18 +209,22 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
         l_bitmap >>= ((bitmap_idx + 1) * BITS_PER_BITMAP - e_bit);
       }
 
-      int l_bits    = static_cast<index_t>(__popc(l_bitmap));
+      int l_bits    = static_cast<index_t>(raft::detail::popc(l_bitmap));
       int l_sum_32b = 0;
       BlockScan(scan_storage).ExclusiveSum(l_bits, l_sum_32b);
       size_t l_sum = g_sum + l_sum_32b;
 
+      bool guard[BITS_PER_BITMAP];
 #pragma unroll
       for (int i = 0; i < BITS_PER_BITMAP; i++) {
-        if (l_bitmap & (ONE << i)) {
-          indices[indptr_row + l_sum] = l_offset + i;
-          l_sum++;
-        }
+        guard[i] = l_bitmap & (ONE << i);
       }
+#pragma unroll
+      for (int i = 0; i < BITS_PER_BITMAP; i++) {
+        stg(l_offset + i, indices_indptr_row + l_sum, guard[i]);
+        l_sum += guard[i];
+      }
+
       int r_sum = BlockReduce(reduce_storage).Reduce(l_bits, cub::Sum());
 
       if (threadIdx.x == 0) { g_sum += r_sum; }
