@@ -165,7 +165,6 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
   using BlockReduce = cub::BlockReduce<int, fill_indices_by_rows_tpb>;
 
   __shared__ typename BlockScan::TempStorage scan_storage;
-  __shared__ typename BlockReduce::TempStorage reduce_storage;
 
   constexpr bitmap_t FULL_MASK      = ~bitmap_t(0u);
   constexpr bitmap_t ONE            = bitmap_t(1u);
@@ -212,7 +211,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
       int l_bits    = static_cast<index_t>(raft::detail::popc(l_bitmap));
       int l_sum_32b = 0;
       BlockScan(scan_storage).ExclusiveSum(l_bits, l_sum_32b);
-      size_t l_sum = g_sum + l_sum_32b;
+      size_t l_sum = l_sum_32b + g_sum;
 
       bool guard[BITS_PER_BITMAP];
 #pragma unroll
@@ -225,10 +224,7 @@ RAFT_KERNEL __launch_bounds__(fill_indices_by_rows_tpb)
         l_sum += guard[i];
       }
 
-      int r_sum = BlockReduce(reduce_storage).Reduce(l_bits, cub::Sum());
-
-      if (threadIdx.x == 0) { g_sum += r_sum; }
-      __syncthreads();
+      if (threadIdx.x == (fill_indices_by_rows_tpb - 1)) { g_sum += (l_sum_32b + l_bits); }
     }
   }
 }
@@ -256,9 +252,9 @@ void fill_indices_by_rows(raft::resources const& handle,
     fill_indices_by_rows_tpb,
     0);
 
-  index_t max_active_blocks = sm_count * blocks_per_sm;
-  auto grid                 = std::min(max_active_blocks, num_rows);
-  auto block                = fill_indices_by_rows_tpb;
+  auto max_active_blocks = sm_count * blocks_per_sm;
+  auto grid              = std::min(max_active_blocks, num_rows);
+  auto block             = fill_indices_by_rows_tpb;
 
   fill_indices_by_rows_kernel<bitmap_t, index_t, nnz_t, check_nnz>
     <<<grid, block, 0, stream>>>(bitmap, indptr, num_rows, num_cols, nnz, bitmap_num, indices);
