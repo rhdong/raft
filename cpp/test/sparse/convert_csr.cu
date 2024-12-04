@@ -459,7 +459,7 @@ const std::vector<BitmapToCSRInputs<index_t>> bitmaptocsr_inputs = {
 
 template <typename index_t>
 const std::vector<BitmapToCSRInputs<index_t>> bitmaptocsr_large_inputs = {
-  {100, 100000000, 0.01, true}, {100, 100000000, 0.05, false}};
+  {100, 100000000, 0.01, true}, {100, 100000000, 0.05, false}, {100, 100000000 + 17, 0.05, false}};
 
 INSTANTIATE_TEST_CASE_P(SparseConvertCSRTest,
                         BitmapToCSRTestI,
