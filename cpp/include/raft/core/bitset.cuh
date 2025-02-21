@@ -306,7 +306,8 @@ void bitset<bitset_t, index_t>::count(const raft::resources& res,
                                       raft::device_scalar_view<index_t> count_gpu_scalar)
 {
   auto max_len = raft::make_host_scalar_view<const index_t, index_t>(&bitset_len_);
-  printf("bitset<bitset_t, index_t>::count, bitset_len_: %u, bitset_.data(): %p", bitset_len_, (void*)(bitset_.data()));
+  std::cout << "bitset_len_: " << bitset_len_ << std::endl;
+  printf("bitset<bitset_t, index_t>::count, bitset_.data(): %p\n", (void*)(bitset_.data()));
   auto values =
     raft::make_device_vector_view<const bitset_t, index_t>(bitset_.data(), n_elements());
   raft::popc(res, values, max_len, count_gpu_scalar);
