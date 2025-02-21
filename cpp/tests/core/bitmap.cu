@@ -119,7 +119,7 @@ class BitmapTest : public testing::TestWithParam<test_spec_bitmap<index_t>> {
 
     ASSERT_EQ(bitmap_view_d.get_n_rows(), spec.rows);
     ASSERT_EQ(bitmap_view_d.get_n_cols(), spec.cols);
-    std::cout << " bitmap_view_d.count() : " << bitmap_view_d.count() << std::endl;
+    std::cout << " bitmap_view_d.count() : " << bitmap_view_d.count(res) << std::endl;
     auto query_device  = raft::make_device_vector<index_t, index_t>(res, spec.query_len);
     auto result_device = raft::make_device_vector<uint8_t, index_t>(res, spec.query_len);
     auto query_cpu     = std::vector<index_t>(spec.query_len);
