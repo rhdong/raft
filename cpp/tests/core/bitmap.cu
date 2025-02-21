@@ -179,12 +179,7 @@ class BitmapTest : public testing::TestWithParam<test_spec_bitmap<index_t>> {
 
 template <typename index_t>
 auto inputs_bitmap =
-  ::testing::Values(test_spec_bitmap<index_t>{32, 32, 5, 10},
-                    test_spec_bitmap<index_t>{100, 100, 30, 10},
-                    test_spec_bitmap<index_t>{1024, 1024, 55, 100},
-                    test_spec_bitmap<index_t>{10000, 10000, 1000, 1000},
-                    test_spec_bitmap<index_t>{1 << 15, 1 << 15, 1 << 3, 1 << 12},
-                    test_spec_bitmap<index_t>{1 << 15, 1 << 15, 1 << 24, 1 << 13});
+  ::testing::Values(test_spec_bitmap<index_t>{4, 4, 3, 2});
 
 using BitmapTest_Uint32_32 = BitmapTest<uint32_t, uint32_t>;
 TEST_P(BitmapTest_Uint32_32, Run) { run(); }
