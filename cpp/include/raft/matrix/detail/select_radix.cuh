@@ -1028,7 +1028,7 @@ _RAFT_DEVICE void filter_and_histogram_for_one_block(const T* in_buf,
       if (previous_bits == kth_value_bits) {
 #if CUDART_VERSION < 12000
         // Avoiding potential compiler bug in CUDA 11
-        volatile
+        // volatile
 #endif
           IdxT pos       = atomicAdd(p_filter_cnt, static_cast<IdxT>(1));
         out_buf[pos]     = value;
