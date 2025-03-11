@@ -1818,7 +1818,7 @@ auto lanczos_smallest(
   ValueTypeT one  = 1;
   ValueTypeT mone = -1;
 
-  auto uu  = raft::make_device_matrix<ValueTypeT>(handle, 1, nEigVecs);
+  auto uu  = raft::make_device_matrix<ValueTypeT>(handle, 1, nEigVecs * n);
   raft::matrix::fill(handle, uu.view(), zero);
   
   int iter = ncv;
