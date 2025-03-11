@@ -426,7 +426,7 @@ _RAFT_DEVICE void last_filter(const T* in_buf,
     const auto bits = (twiddle_in(value, select_min) >> start_bit) << start_bit;
     if (bits < kth_value_bits) {
       IdxT pos = atomicAdd(p_out_cnt, static_cast<IdxT>(1));
-      out[pos] = (i != 749) ? value : value + 0.000001;;
+      out[pos] = value;
       // For one-block version, `in_idx_buf` could be nullptr at pass 0.
       // For non one-block version, if writing has been skipped, `in_idx_buf` could be nullptr if
       // `in_buf` is `in`
@@ -435,7 +435,7 @@ _RAFT_DEVICE void last_filter(const T* in_buf,
       IdxT back_pos = atomicAdd(p_out_back_cnt, static_cast<IdxT>(1));
       if (back_pos < num_of_kth_needed) {
         IdxT pos     = k - 1 - back_pos;
-        out[pos]     = (i != 749) ? value : value + 0.000001;
+        out[pos]     = value;
         out_idx[pos] = in_idx_buf ? in_idx_buf[i] : i;
       }
     }
@@ -1028,17 +1028,17 @@ _RAFT_DEVICE void filter_and_histogram_for_one_block(const T* in_buf,
       if (previous_bits == kth_value_bits) {
 #if CUDART_VERSION < 12000
         // Avoiding potential compiler bug in CUDA 11
-        //volatile
+        volatile
 #endif
           IdxT pos       = atomicAdd(p_filter_cnt, static_cast<IdxT>(1));
-        out_buf[pos]     = (i != 749) ? value : value + 0.000001;;
+        out_buf[pos]     = value;
         out_idx_buf[pos] = in_idx_buf ? in_idx_buf[i] : i;
 
         int bucket = calc_bucket<T, BitsPerPass>(value, start_bit, mask, select_min);
         atomicAdd(histogram + bucket, static_cast<IdxT>(1));
       } else if (previous_bits < kth_value_bits) {
         IdxT pos     = atomicAdd(p_out_cnt, static_cast<IdxT>(1));
-        out[pos]     = (i != 749) ? value : value + 0.000001;;
+        out[pos]     = value;
         out_idx[pos] = in_idx_buf ? in_idx_buf[i] : i;
       }
     }
@@ -1159,16 +1159,6 @@ RAFT_KERNEL radix_topk_one_block_kernel(const T* in,
     }
   }
 }
-										
-template <typename T, typename IdxT>
-__global__ void dump_array_kernel(T* array, IdxT size, int id)
-{
-  printf("device: %d, size=%d\n", id, int(size));
-  for (IdxT i = 0; i < size; i++) {
-    printf("%f, ", array[i]);
-  }
-  printf("\n");
-}
 
 // radix_topk() might use multiple thread blocks for one row of a batch. In contrast, the following
 // one-block version uses single thread block for one row of a batch, so intermediate data, like
@@ -1212,7 +1202,6 @@ void radix_topk_one_block(const T* in,
                                                  select_min,
                                                  bufs.data(),
                                                  offset);
-    dump_array_kernel<<<1,1,0,stream>>>(out, batch_size * k, offset + 1000);
   }
 }
 

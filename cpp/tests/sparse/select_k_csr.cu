@@ -67,29 +67,7 @@ struct CompareApproxWithInf {
  private:
   T eps;
 };
-template <typename T, typename IdxT>
-__global__ void dump_array_kernel(T* array, IdxT size, int id)
-{
-  printf("device: %d, size=%d\n", id, int(size));
-  for (IdxT i = 0; i < size; i++) {
-    if(i % 258 == 0) printf("\n");
-    printf("%f, ", array[i]);
-  }
-  printf("\n");
-}
 
-template <typename T, typename IdxT>
-__global__ void dump_idx_kernel(T* array, IdxT size, int id)
-{
-  printf("device: %d, size=%d\n", id, int(size));
-  for (IdxT i = 0; i < size; i++) {
-    if(i % 258 == 0) printf("\n");
-    if constexpr (sizeof(T) == 4) { printf("%u, ", uint32_t(array[i])); }
-
-    if constexpr (sizeof(T) == 8) { printf("%lld, ", int64_t(array[i])); }
-  }
-  printf("\n");
-}
 template <typename value_t, typename index_t>
 class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>> {
  public:
@@ -119,9 +97,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
     }
 
     std::random_device rd;
-    auto x = 331357841;//rd();
-    std::mt19937 gen(x);
-    std::cout << "create_sparse_matrix rd: " << x << std::endl;
+    std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis_idx(0, total_elements - 1);
 
     while (num_ones > 0) {
@@ -209,9 +185,7 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
   void random_array(value_t* array, size_t size)
   {
     std::random_device rd;
-    auto x = 3601158734;//rd();
-    std::mt19937 gen(x);
-    std::cout << "random_array rd: " << x << std::endl;
+    std::mt19937 gen(rd());
     std::uniform_real_distribution<value_t> dis(-10.0, 10.0);
     std::unordered_set<value_t> uset;
 
@@ -326,28 +300,18 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
 
     raft::sparse::matrix::select_k(
       handle, in_val, in_idx, out_val, out_idx, params.select_min, true);
-    dump_idx_kernel<<<1, 1, 0, stream>>>(dst_indices_expected_d.data(), params.n_rows * params.top_k, 0);
-    dump_idx_kernel<<<1, 1, 0, stream>>>(out_idx.data_handle(), params.n_rows * params.top_k, 1);
 
-    dump_array_kernel<<<1, 1, 0, stream>>>(dst_values_expected_d.data(), params.n_rows * params.top_k, 2);
-    dump_array_kernel<<<1, 1, 0, stream>>>(out_val.data_handle(), params.n_rows * params.top_k, 2);
     ASSERT_TRUE(raft::devArrMatch<index_t>(dst_indices_expected_d.data(),
                                            out_idx.data_handle(),
                                            params.n_rows * params.top_k,
                                            raft::Compare<index_t>(),
-                                           stream))
-      << "n_rows: " << params.n_rows << ", n_cols: " << params.n_cols
-      << ", sparsity: " << params.sparsity << ", select_min: " << params.select_min
-      << ", customized_indices: " << params.customized_indices;
+                                           stream));
+
     ASSERT_TRUE(raft::devArrMatch<value_t>(dst_values_expected_d.data(),
                                            out_val.data_handle(),
                                            params.n_rows * params.top_k,
                                            CompareApproxWithInf<value_t>(1e-6f),
-                                           stream))
-      << "n_rows: " << params.n_rows << ", n_cols: " << params.n_cols
-      << ", sparsity: " << params.sparsity << ", select_min: " << params.select_min
-      << ", customized_indices: " << params.customized_indices;
-    ;
+                                           stream));
   }
 
  protected:
@@ -370,64 +334,62 @@ class SelectKCsrTest : public ::testing::TestWithParam<SelectKCsrInputs<index_t>
   rmm::device_uvector<index_t> dst_indices_expected_d;
 };
 
-// using SelectKCsrTest_float_int = SelectKCsrTest<float, int>;
-// TEST_P(SelectKCsrTest_float_int, Result) { Run(); }
+using SelectKCsrTest_float_int = SelectKCsrTest<float, int>;
+TEST_P(SelectKCsrTest_float_int, Result) { Run(); }
 
 using SelectKCsrTest_double_int64 = SelectKCsrTest<double, int64_t>;
 TEST_P(SelectKCsrTest_double_int64, Result) { Run(); }
 
 template <typename index_t>
 const std::vector<SelectKCsrInputs<index_t>> selectk_inputs = {
-  {1, 1024, 258, 0.3, true, false},  // kWarpImmediate
-                                     //   {10, 32, 10, 0.0, true, false},
-                                     //   {10, 32, 10, 0.0, true, true},
-                                     //   {10, 32, 10, 0.01, true, false},  // kWarpImmediate
-                                     //   {10, 32, 10, 0.1, true, true},
-                                     //   {10, 32, 251, 0.1, true, false},  // kWarpImmediate
-                                     //   {10, 32, 251, 0.6, true, true},
-  //   {1000, 1024 * 100, 1, 0.1, true, false},  // kWarpImmediate
-  //   {1000, 1024 * 100, 1, 0.2, true, true},
-  //   {1024, 1024, 258, 0.3, true, false},  // kRadix11bitsExtraPass
-  //   {1024, 1024, 600, 0.2, true, true},
-  //   {1024, 1024, 1024, 0.3, true, false},  // kRadix11bitsExtraPass
-  //   {1024, 1024, 1024, 0.2, true, true},
-  //   {100, 1024 * 1000, 251, 0.1, true, false},  // kWarpDistributedShm
-  //   {100, 1024 * 1000, 251, 0.2, true, true},
-  //   {1024, 1024 * 10, 251, 0.3, true, false},  // kWarpImmediate
-  //   {1024, 1024 * 10, 251, 0.2, true, true},
-  //   {1000, 1024 * 20, 1000, 0.2, true, false},  // kRadix11bits
-  //   {1000, 1024 * 20, 1000, 0.3, true, true},
-  //   {2048, 1024 * 10, 1000, 0.2, true, false},  // kRadix11bitsExtraPass
-  //   {2048, 1024 * 10, 1000, 0.3, true, true},
-  //   {2048, 1024 * 10, 2100, 0.1, true, false},  // kRadix11bitsExtraPass
-  //   {2048, 1024 * 10, 2100, 0.2, true, true},
-  //   {10, 32, 10, 0.0, false, false},
-  //   {10, 32, 10, 0.0, false, true},
-  //   {10, 32, 10, 0.01, false, false},  // kWarpImmediate
-  //   {10, 32, 10, 0.1, false, true},
-  //   {10, 32, 251, 0.1, false, false},  // kWarpImmediate
-  //   {10, 32, 251, 0.6, false, true},
-  //   {1000, 1024 * 100, 1, 0.1, false, false},  // kWarpImmediate
-  //   {1000, 1024 * 100, 1, 0.2, false, true},
-  //   {1024, 1024, 258, 0.3, false, false},  // kRadix11bitsExtraPass
-  //   {1024, 1024, 600, 0.2, false, true},
-  //   {1024, 1024, 1024, 0.3, false, false},  // kRadix11bitsExtraPass
-  //   {1024, 1024, 1024, 0.2, false, true},
-  //   {100, 1024 * 1000, 251, 0.1, false, false},  // kWarpDistributedShm
-  //   {100, 1024 * 1000, 251, 0.2, false, true},
-  //   {1024, 1024 * 10, 251, 0.3, false, false},  // kWarpImmediate
-  //   {1024, 1024 * 10, 251, 0.2, false, true},
-  //   {1000, 1024 * 20, 1000, 0.2, false, false},  // kRadix11bits
-  //   {1000, 1024 * 20, 1000, 0.3, false, true},
-  //   {2048, 1024 * 10, 1000, 0.2, false, false},  // kRadix11bitsExtraPass
-  //   {2048, 1024 * 10, 1000, 0.3, false, true},
-  //   {2048, 1024 * 10, 2100, 0.1, false, false},  // kRadix11bitsExtraPass
-  //   {2048, 1024 * 10, 2100, 0.2, false, true}
-};
+  {10, 32, 10, 0.0, true, false},
+  {10, 32, 10, 0.0, true, true},
+  {10, 32, 10, 0.01, true, false},  // kWarpImmediate
+  {10, 32, 10, 0.1, true, true},
+  {10, 32, 251, 0.1, true, false},  // kWarpImmediate
+  {10, 32, 251, 0.6, true, true},
+  {1000, 1024 * 100, 1, 0.1, true, false},  // kWarpImmediate
+  {1000, 1024 * 100, 1, 0.2, true, true},
+  {1024, 1024, 258, 0.3, true, false},  // kRadix11bitsExtraPass
+  {1024, 1024, 600, 0.2, true, true},
+  {1024, 1024, 1024, 0.3, true, false},  // kRadix11bitsExtraPass
+  {1024, 1024, 1024, 0.2, true, true},
+  {100, 1024 * 1000, 251, 0.1, true, false},  // kWarpDistributedShm
+  {100, 1024 * 1000, 251, 0.2, true, true},
+  {1024, 1024 * 10, 251, 0.3, true, false},  // kWarpImmediate
+  {1024, 1024 * 10, 251, 0.2, true, true},
+  {1000, 1024 * 20, 1000, 0.2, true, false},  // kRadix11bits
+  {1000, 1024 * 20, 1000, 0.3, true, true},
+  {2048, 1024 * 10, 1000, 0.2, true, false},  // kRadix11bitsExtraPass
+  {2048, 1024 * 10, 1000, 0.3, true, true},
+  {2048, 1024 * 10, 2100, 0.1, true, false},  // kRadix11bitsExtraPass
+  {2048, 1024 * 10, 2100, 0.2, true, true},
+  {10, 32, 10, 0.0, false, false},
+  {10, 32, 10, 0.0, false, true},
+  {10, 32, 10, 0.01, false, false},  // kWarpImmediate
+  {10, 32, 10, 0.1, false, true},
+  {10, 32, 251, 0.1, false, false},  // kWarpImmediate
+  {10, 32, 251, 0.6, false, true},
+  {1000, 1024 * 100, 1, 0.1, false, false},  // kWarpImmediate
+  {1000, 1024 * 100, 1, 0.2, false, true},
+  {1024, 1024, 258, 0.3, false, false},  // kRadix11bitsExtraPass
+  {1024, 1024, 600, 0.2, false, true},
+  {1024, 1024, 1024, 0.3, false, false},  // kRadix11bitsExtraPass
+  {1024, 1024, 1024, 0.2, false, true},
+  {100, 1024 * 1000, 251, 0.1, false, false},  // kWarpDistributedShm
+  {100, 1024 * 1000, 251, 0.2, false, true},
+  {1024, 1024 * 10, 251, 0.3, false, false},  // kWarpImmediate
+  {1024, 1024 * 10, 251, 0.2, false, true},
+  {1000, 1024 * 20, 1000, 0.2, false, false},  // kRadix11bits
+  {1000, 1024 * 20, 1000, 0.3, false, true},
+  {2048, 1024 * 10, 1000, 0.2, false, false},  // kRadix11bitsExtraPass
+  {2048, 1024 * 10, 1000, 0.3, false, true},
+  {2048, 1024 * 10, 2100, 0.1, false, false},  // kRadix11bitsExtraPass
+  {2048, 1024 * 10, 2100, 0.2, false, true}};
 
-// INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
-//                         SelectKCsrTest_float_int,
-//                         ::testing::ValuesIn(selectk_inputs<int>));
+INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
+                        SelectKCsrTest_float_int,
+                        ::testing::ValuesIn(selectk_inputs<int>));
 INSTANTIATE_TEST_CASE_P(SelectKCsrTest,
                         SelectKCsrTest_double_int64,
                         ::testing::ValuesIn(selectk_inputs<int64_t>));
