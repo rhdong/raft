@@ -1818,9 +1818,17 @@ auto lanczos_smallest(
   ValueTypeT one  = 1;
   ValueTypeT mone = -1;
 
-  auto uu  = raft::make_device_matrix<ValueTypeT>(handle, 1, nEigVecs * n);
-  raft::matrix::fill(handle, uu.view(), zero);
-  
+  auto uu  = raft::make_device_matrix<ValueTypeT>(handle, 1, n);
+  auto u_reduced = raft::make_device_matrix<ValueTypeT, uint32_t, raft::row_major>(handle, 1, nEigVecs);
+  auto u_reduced_vector = raft::make_device_vector_view<ValueTypeT, uint32_t>(u_reduced.data_handle(), nEigVecs);
+  raft::linalg::detail::cublasgemv(
+    cublas_h, CUBLAS_OP_T,
+    nEigVecs, n,
+    &one,
+    V.data_handle(), nEigVecs,
+    u.data_handle(), 1,
+    &zero,
+    u_reduced.data_handle(), 1, stream);
   int iter = ncv;
   while (res > tol && iter < maxIter) {
     auto beta_view = raft::make_device_matrix_view<ValueTypeT, uint32_t, raft::row_major>(
@@ -1842,7 +1850,7 @@ auto lanczos_smallest(
                                      &one,
                                      V.data_handle(),
                                      nEigVecs,
-                                     u.data_handle(),
+                                     u_reduced.data_handle(),
                                      1,
                                      &zero,
                                      uu.data_handle(),
@@ -1859,7 +1867,7 @@ auto lanczos_smallest(
                                      uu.data_handle(),
                                      1,
                                      &one,
-                                     u.data_handle(),
+                                     u_reduced.data_handle(),
                                      1,
                                      stream);
 
