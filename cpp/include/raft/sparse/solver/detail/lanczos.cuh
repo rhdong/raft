@@ -1814,8 +1814,13 @@ auto lanczos_smallest(
                      raft::sqrt_op());
   raft::copy(&res, output.data_handle(), 1, stream);
   resource::sync_stream(handle, stream);
+  
+  ValueTypeT one  = 1;
+  ValueTypeT mone = -1;
 
   auto uu  = raft::make_device_matrix<ValueTypeT>(handle, 1, nEigVecs);
+  raft::matrix::fill(handle, uu.view(), zero);
+  
   int iter = ncv;
   while (res > tol && iter < maxIter) {
     auto beta_view = raft::make_device_matrix_view<ValueTypeT, uint32_t, raft::row_major>(
@@ -1828,9 +1833,6 @@ auto lanczos_smallest(
       raft::make_device_matrix_view<ValueTypeT>(ritz_eigenvectors.data_handle(), nEigVecs, n);
 
     raft::copy(V.data_handle(), x_T.data_handle(), nEigVecs * n, stream);
-
-    ValueTypeT one  = 1;
-    ValueTypeT mone = -1;
 
     // Using raft::linalg::gemv leads to Reason=7:CUBLAS_STATUS_INVALID_VALUE (issue raft#2484)
     raft::linalg::detail::cublasgemv(cublas_h,
