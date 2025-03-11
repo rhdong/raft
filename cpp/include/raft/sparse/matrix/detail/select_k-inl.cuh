@@ -106,7 +106,7 @@ void select_k(raft::resources const& handle,
   if (algo == SelectAlgo::kAuto) { algo = choose_select_k_algorithm(batch_size, len, k); }
 
   auto indptr = csr_view.get_indptr().data();
-
+  std::cout << "algo: " << int(algo) << std::endl;
   switch (algo) {
     case SelectAlgo::kRadix8bits:
     case SelectAlgo::kRadix11bits:

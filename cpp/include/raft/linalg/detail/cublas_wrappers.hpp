@@ -964,9 +964,11 @@ inline cublasStatus_t cublasdot(cublasHandle_t handle,
                                 float* result,
                                 cudaStream_t stream)
 {
-  RAFT_CUBLAS_TRY(cublasSetStream(handle, stream));
-  return cublasDotEx(
+  // RAFT_CUBLAS_TRY(cublasSetStream(handle, stream));
+  cublasStatus_t status = cublasSetStream(handle, stream);
+  status = cublasDotEx(
     handle, n, x, CUDA_R_32F, incx, y, CUDA_R_32F, incy, result, CUDA_R_32F, CUDA_R_32F);
+  return status;
 }
 
 template <>

@@ -889,6 +889,7 @@ int computeSmallestEigenvectors(
   // Obtain tridiagonal matrix with Lanczos
   *effIter = 0;
   *shift   = 0;
+  std::cout << "performLanczosIteration 1" << std::endl;
   status   = performLanczosIteration<index_type_t, value_type_t, nnz_type_t>(handle,
                                                                            A,
                                                                            effIter,
@@ -914,6 +915,7 @@ int computeSmallestEigenvectors(
   // Obtain tridiagonal matrix with Lanczos
   *effIter = 0;
 
+  std::cout << "performLanczosIteration 2" << std::endl;
   status = performLanczosIteration<index_type_t, value_type_t, nnz_type_t>(handle,
                                                                            A,
                                                                            effIter,
@@ -962,6 +964,7 @@ int computeSmallestEigenvectors(
 
     // Proceed with Lanczos method
 
+    std::cout << "performLanczosIteration 3" << std::endl;
     status = performLanczosIteration<index_type_t, value_type_t, nnz_type_t>(handle,
                                                                              A,
                                                                              effIter,
@@ -1237,6 +1240,7 @@ int computeLargestEigenvectors(
   value_type_t shift_val = 0.0;
   value_type_t* shift    = &shift_val;
 
+  std::cout << "performLanczosIteration 4" << std::endl;
   status = performLanczosIteration<index_type_t, value_type_t, nnz_type_t>(handle,
                                                                            A,
                                                                            effIter,
@@ -1285,6 +1289,7 @@ int computeLargestEigenvectors(
 
     // Proceed with Lanczos method
 
+    std::cout << "performLanczosIteration 5" << std::endl;
     status = performLanczosIteration<index_type_t, value_type_t, nnz_type_t>(handle,
                                                                              A,
                                                                              effIter,
@@ -1589,6 +1594,9 @@ void lanczos_aux(raft::resources const& handle,
   auto cusparse_spmv_buffer = raft::make_device_vector<ValueTypeT>(handle, bufferSize);
 
   for (int i = start_idx; i < end_idx; i++) {
+    std::cerr << "lanczos_aux1: i: " << i
+		      << ", start_idx: " << start_idx
+		      << ", end_idx: " << end_idx << std::endl;
     raft::sparse::detail::cusparsespmv(cusparse_h,
                                        CUSPARSE_OPERATION_NON_TRANSPOSE,
                                        &one,
@@ -1603,7 +1611,9 @@ void lanczos_aux(raft::resources const& handle,
     auto alpha_i =
       raft::make_device_scalar_view(alpha.data_handle() + i * alpha.stride(1));  // alpha(0, i)
     raft::linalg::dot(handle, v_vector, u_vector, alpha_i);
-
+    std::cerr << "lanczos_aux2: i: " << i
+		      << ", start_idx: " << start_idx
+		      << ", end_idx: " << end_idx << std::endl;
     raft::matrix::fill(handle, vv, zero);
 
     auto cublas_h = resource::get_cublas_handle(handle);
@@ -1813,14 +1823,18 @@ auto lanczos_smallest(
                      raft::linalg::Apply::ALONG_ROWS,
                      raft::sqrt_op());
   raft::copy(&res, output.data_handle(), 1, stream);
-  resource::sync_stream(handle, stream);
+  resource::sync_stream(handle, stream);    
 
-  auto uu  = raft::make_device_matrix<ValueTypeT>(handle, 0, nEigVecs);
+
+  auto uu  = raft::make_device_matrix<ValueTypeT>(handle, 1, nEigVecs);
   int iter = ncv;
   while (res > tol && iter < maxIter) {
+  	
+
     auto beta_view = raft::make_device_matrix_view<ValueTypeT, uint32_t, raft::row_major>(
       beta.data_handle(), 1, nEigVecs);
     raft::matrix::fill(handle, beta_view, zero);
+
 
     raft::copy(alpha.data_handle(), eigenvalues_k.data_handle(), nEigVecs, stream);
 
@@ -1828,6 +1842,7 @@ auto lanczos_smallest(
       raft::make_device_matrix_view<ValueTypeT>(ritz_eigenvectors.data_handle(), nEigVecs, n);
 
     raft::copy(V.data_handle(), x_T.data_handle(), nEigVecs * n, stream);
+
 
     ValueTypeT one  = 1;
     ValueTypeT mone = -1;
@@ -1861,6 +1876,7 @@ auto lanczos_smallest(
                                      1,
                                      stream);
 
+
     auto V_0_view =
       raft::make_device_matrix_view<ValueTypeT>(V.data_handle() + (nEigVecs * n), 1, n);
     auto V_0_view_vector =
@@ -1872,6 +1888,7 @@ auto lanczos_smallest(
                        raft::linalg::L2Norm,
                        raft::linalg::Apply::ALONG_ROWS,
                        raft::sqrt_op());
+
 
     raft::linalg::unary_op(
       handle,
@@ -1912,10 +1929,23 @@ auto lanczos_smallest(
                                        stream);
 
     auto alpha_k = raft::make_device_scalar_view<ValueTypeT>(alpha.data_handle() + nEigVecs);
-
+    std::cout << "right before dot, alpha.size: " << alpha.size()
+		      << ", V_0_view_vector.size(): " << V_0_view_vector.size() 
+		      << ", u_vector.size(): " << u_vector.size() << std::endl;
+	cudaDeviceSynchronize();
+	cudaError_t err = cudaGetLastError();
+	if (err != cudaSuccess) {
+	  std::cerr << "CUDA error before cublasdot: " << cudaGetErrorString(err) << std::endl;
+	}
     raft::linalg::dot(
       handle, make_const_mdspan(V_0_view_vector), make_const_mdspan(u_vector), alpha_k);
+	cudaDeviceSynchronize();
+	err = cudaGetLastError();
+	if (err != cudaSuccess) {
+	  std::cerr << "CUDA error after cublasdot: " << cudaGetErrorString(err) << std::endl;
+	}
 
+    std::cout << "right after dot " << std::endl;
     raft::linalg::binary_op(handle,
                             make_const_mdspan(u_vector),
                             make_const_mdspan(V_0_view_vector),
@@ -2065,7 +2095,6 @@ auto lanczos_smallest(
                        raft::sqrt_op());
     raft::copy(&res, output2.data_handle(), 1, stream);
     resource::sync_stream(handle, stream);
-    RAFT_LOG_TRACE("Iteration %f: residual (tolerance) %d", iter, res);
   }
 
   raft::copy(eigVals_dev, eigenvalues_k.data_handle(), nEigVecs, stream);

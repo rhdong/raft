@@ -166,6 +166,7 @@ int performLanczosIteration(raft::resources const& handle,
     // Full reorthogonalization
     //   "Twice is enough" algorithm per Kahan and Parlett
     if (reorthogonalize) {
+ 	  RAFT_EXPECTS(*iter < maxIter + 1, "Lanczos iteration index out of bounds.");
       RAFT_CUBLAS_TRY(cublasgemv(cublas_h,
                                  CUBLAS_OP_T,
                                  n,
