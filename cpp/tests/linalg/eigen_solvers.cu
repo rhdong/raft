@@ -190,6 +190,16 @@ TEST(Raft, SpectralPartition)
             result_v.data().get(),
             eig_vals.data().get(),
             eig_vects.data().get());
+            
+  std::vector<float> h_eig_vals(n_eig_vects);
+  thrust::copy(eig_vals.begin(), eig_vals.end(), h_eig_vals.begin());
+
+  // Print eigenvalues
+  std::cout << "Eigenvalues: ";
+  for (float val : h_eig_vals) {
+      std::cout << val << " ";
+  }
+  std::cout << std::endl;
 
   auto edge_cut = float{};
   auto cost     = float{};
