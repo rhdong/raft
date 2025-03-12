@@ -120,53 +120,6 @@ namespace spectral {
 //   value_type cost{0};
 //   EXPECT_ANY_THROW(spectral::analyzePartition(h, sm, k, clusters, edgeCut, cost));
 // }
-void computeDotProduct(cudaStream_t stream) {
-    cublasHandle_t handle;
-    std::cerr << "computeDotProduct!" << std::endl;
-    cublasStatus_t status = cublasCreate(&handle);
-    if (status != CUBLAS_STATUS_SUCCESS) {
-        std::cerr << "cuBLAS initialization failed!" << std::endl;
-        return;
-    }
-    cublasSetStream(handle, stream);
-
-    std::vector<float> h_x(34, 1.0f);
-    std::vector<float> h_y(34, 1.0f);
-    float h_result = 0.0f;
-
-    float* d_x;
-    float* d_y;
-    float* d_result;
-    cudaMalloc((void**)&d_x, 34 * sizeof(float));
-    cudaMalloc((void**)&d_y, 34 * sizeof(float));
-    cudaMalloc((void**)&d_result, sizeof(float));
-
-    cudaMemcpy(d_x, h_x.data(), 34 * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_y, h_y.data(), 34 * sizeof(float), cudaMemcpyHostToDevice);
-
-    cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_HOST);
-
-    status = cublasDotEx(
-        handle, 34, d_x, CUDA_R_32F, 1, d_y, CUDA_R_32F, 1, d_result, CUDA_R_32F, CUDA_R_32F
-    );
-    if (status != CUBLAS_STATUS_SUCCESS) {
-        std::cerr << "cublasDotEx execution failed!" << std::endl;
-        cublasDestroy(handle);
-        cudaFree(d_x);
-        cudaFree(d_y);
-        cudaFree(d_result);
-        return;
-    }
-
-    cudaMemcpy(&h_result, d_result, sizeof(float), cudaMemcpyDeviceToHost);
-
-    std::cout << "Dot product result of x and y: " << h_result << std::endl;
-
-    cublasDestroy(handle);
-    cudaFree(d_x);
-    cudaFree(d_y);
-    cudaFree(d_result);
-}
 
 TEST(Raft, SpectralPartition)
 {
@@ -208,10 +161,6 @@ TEST(Raft, SpectralPartition)
   auto eig_vects = thrust::device_vector<float>(n_eig_vects * num_verts);
 
   auto handle = raft::handle_t{};
-  computeDotProduct(resource::get_cuda_stream(handle));
-  computeDotProduct(resource::get_cuda_stream(handle));
-  computeDotProduct(resource::get_cuda_stream(handle));
-  computeDotProduct(resource::get_cuda_stream(handle));
 
   auto restartIter_lanczos = int{15 + n_eig_vects};
 
@@ -247,7 +196,6 @@ TEST(Raft, SpectralPartition)
 
   raft::spectral::analyzePartition(
     handle, adj_matrix, n_clusters, result_v.data().get(), edge_cut, cost);
-  computeDotProduct(resource::get_cuda_stream(handle));
   ASSERT_LT(edge_cut, 55.0);
 }
 
