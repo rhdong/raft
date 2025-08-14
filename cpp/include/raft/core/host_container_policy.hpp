@@ -23,8 +23,10 @@
 #pragma once
 #include <raft/core/mdspan_types.hpp>
 #include <raft/core/resources.hpp>
+#include <raft/core/pinned_container_policy.hpp>
 
-#include <vector>
+#include <cstddef>
+#include <type_traits>
 
 namespace raft {
 
@@ -35,8 +37,7 @@ template <typename ElementType>
 class host_vector_policy {
  public:
   using element_type          = ElementType;
-  using allocator_type        = std::allocator<ElementType>;
-  using container_type        = std::vector<element_type, allocator_type>;
+  using container_type        = pinned_container<element_type>;
   using pointer               = typename container_type::pointer;
   using const_pointer         = typename container_type::const_pointer;
   using reference             = element_type&;
